@@ -32,6 +32,7 @@ A user should be able to answer quickly:
 - Booking work: `domain/REQUEST_BOOKING_MODEL.md` + `domain/APPROVAL_MODEL.md`
 - Mobile UI: `experience/MOBILE_EXPERIENCE.md` + `design/RESPONSIVE_RULES.md`
 - UI components: `design/DESIGN_SYSTEM.md` + `design/COMPONENT_ARCHITECTURE.md`
+- Backend, identity, and media infrastructure: `engineering/ADR_001_BACKEND_AUTH_STORAGE.md`
 - Slice planning: `delivery/IMPLEMENTATION_PLAN.md`
 
 ## Non-negotiables

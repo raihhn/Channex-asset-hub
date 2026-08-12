@@ -37,6 +37,12 @@ For mobile tasks, read:
 ## Domain integrity
 Availability, permissions, approvals, and material state transitions are server-authoritative. Revalidate at mutation time.
 
+## Infrastructure boundaries
+- Read `docs/engineering/ADR_001_BACKEND_AUTH_STORAGE.md` before adding persistent data, authentication, or asset media.
+- Supabase is the initial managed provider, not the application architecture. Feature/UI code must not call Supabase directly.
+- Preserve the application identity contracts (`getCurrentSession`, `getCurrentUser`, `hasCapability`) and use server/domain/repository or storage boundaries.
+- Never expose service-role credentials, database passwords, or other privileged provider secrets to browser code.
+
 ## Implementation slices
 Follow `/docs/delivery/IMPLEMENTATION_PLAN.md`.
 When asked to implement one slice:

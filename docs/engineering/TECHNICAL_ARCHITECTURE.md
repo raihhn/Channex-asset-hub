@@ -13,7 +13,11 @@ Recommended baseline for Codex planning:
 - schema-validated server mutations
 - audit/history for sensitive operational changes
 
-Exact backend/provider choices should be confirmed from the implementation environment rather than invented from V1 prototype code.
+## Managed infrastructure decision
+
+The initial managed provider is Supabase PostgreSQL, Supabase Auth, and Supabase Storage. This is an accepted infrastructure decision, not a Supabase-coupled application architecture. See [ADR 001](ADR_001_BACKEND_AUTH_STORAGE.md).
+
+The application remains PostgreSQL-oriented. Feature/UI code must use domain/application services and repository or storage boundaries; it must not query Supabase directly. Supabase dependencies and configuration are introduced only in the slice that needs them.
 
 ## Architecture principles
 - Domain logic is not embedded only in UI.
@@ -22,3 +26,5 @@ Exact backend/provider choices should be confirmed from the implementation envir
 - Mobile and desktop consume the same business rules.
 - Prototype mock data is not treated as production persistence.
 - Environment-specific secrets never live in client code.
+- Provider SDK calls are isolated behind server-side repository, identity, and storage adapters.
+- Binary asset media lives in object storage; PostgreSQL stores metadata and object references.
