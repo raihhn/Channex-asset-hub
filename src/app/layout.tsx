@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+import { PrototypeProvider } from "@/features/prototype/prototype-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "AssetHub",
-  description: "AssetHub V2 operational foundation",
+  description: "Find and request event assets with confidence.",
 };
 
 export const viewport: Viewport = {
@@ -18,7 +21,11 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <TooltipProvider>
+          <PrototypeProvider>{children}</PrototypeProvider>
+        </TooltipProvider>
+      </body>
     </html>
   );
 }

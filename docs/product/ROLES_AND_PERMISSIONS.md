@@ -1,5 +1,9 @@
 # Roles and Permissions
 
+> The Slice 6 prototype Person/role/scope contract is documented in [People, Roles, Scope, and Audit](../domain/PEOPLE_ROLES_SCOPE_AND_AUDIT.md). This page describes eventual capabilities, not permissions already enforced by the fixture-only app. In particular, Approver and System Admin below are capability-planning labels, not the canonical Slice 6 role IDs, and approval routing is not implemented.
+
+> Slice 7A adds [manual Request review](../domain/MANUAL_REQUEST_REVIEW.md), not an approval matrix. The prototype Super Admin assigns active internal People manually; only the assigned reviewer may decide. These limited guards are not production RBAC.
+
 V2 should implement capabilities rather than relying on page-level hiding alone. Final organization-specific role names may be configured later.
 
 ## Capability groups
@@ -41,3 +45,8 @@ Includes standard-user capabilities plus:
 - Approval actions must validate that the current user is an eligible approver.
 - Asset status/location changes should be auditable.
 - Users should only see protected user/admin fields when authorized.
+# Prototype role views
+
+AssetHub uses capability-oriented access, with role presets only as review aids: Viewer, Requester, Asset Ops, Approver, and System Admin. A development-only role switcher may demonstrate different UI relevance, but it is not authentication or authorization.
+
+Viewer sees Home, Assets, and Me. Requester adds New Request and My Requests. Asset Ops adds asset creation, health, issues, maintenance, and return inspection. Approver adds the approval queue. System Admin adds governed Master Data, users/access, and approval configuration. Real enforcement remains a future server-authoritative responsibility.

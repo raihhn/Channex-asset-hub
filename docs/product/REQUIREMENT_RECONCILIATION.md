@@ -27,3 +27,6 @@ A requirement omitted from later feedback is not automatically removed. V1 requi
 
 ## Important preserved V1 value
 Asset age, condition, location, availability, and lifecycle visibility distinguish AssetHub from a generic booking form. They remain part of the V2 product.
+# Consolidated V2 product model
+
+The accepted V2 model treats an asset as a reusable physical unit. Campaigns and setups do not own assets; a reusable setup is a suggestion of independently tracked request items. Requests contain one or more items, with quantity and item-level availability where relevant. Asset health, movement/return inspection, maintenance, and governed operational roles are in scope; cost, procurement, vendor commercial work, event ROI, and full event management remain out of scope.

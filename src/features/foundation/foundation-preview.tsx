@@ -19,7 +19,7 @@ export function FoundationPreview({
         </p>
         <div className="foundation-intro__actions">
           <Button type="button">Foundation ready</Button>
-          <Button type="button" variant="subtle">
+          <Button type="button" variant="secondary">
             {workspaceName}
           </Button>
         </div>

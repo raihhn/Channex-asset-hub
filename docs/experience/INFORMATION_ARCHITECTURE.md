@@ -7,6 +7,14 @@ The operational mobile experience should prioritize:
 - Request / My Requests
 - Activity/Profile as appropriate
 
+Mobile includes a visually distinct New Request entry point between primary destinations when it improves speed. It starts with a searchable, filterable multi-select request-item picker and does not replace asset-first booking logic.
+
+Desktop exposes Reports and Administration as restrained secondary navigation. Administration contains Brand, Category, Warehouse & Vendor, Division, Users, User Mapping, and Approval Matrix. Mobile keeps those destinations under Me rather than adding them to the bottom navigation.
+
+Desktop also exposes Asset Operations for authorized roles. It is an actionable queue for health, maintenance, documentation, return, and setup work—not a new primary product module.
+
+Request Flow is a single staged composition: Items, Usage, Dates, Readiness, Review. Usage can reference a lightweight activation registry or an ad-hoc context; no separate event-management module is introduced.
+
 A prominent create/request action may be used if it improves speed, but it must not replace asset-first booking logic.
 
 ## Mobile secondary/admin

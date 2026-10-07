@@ -1,13 +1,19 @@
 import { render, screen } from "@testing-library/react";
 
 import { AppShell } from "@/components/shared/app-shell";
+import { PrototypeProvider } from "@/features/prototype/prototype-provider";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+}));
 
 describe("AppShell", () => {
   it("provides distinct mobile and desktop navigation foundations", () => {
     render(
-      <AppShell workspaceName="Development workspace">
+      <PrototypeProvider><AppShell pageLabel="Raihan Pradana">
         <p>Foundation content</p>
-      </AppShell>,
+      </AppShell></PrototypeProvider>,
     );
 
     expect(screen.getByLabelText("Desktop navigation")).toBeInTheDocument();

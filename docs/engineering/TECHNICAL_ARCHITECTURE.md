@@ -23,8 +23,11 @@ The application remains PostgreSQL-oriented. Feature/UI code must use domain/app
 - Domain logic is not embedded only in UI.
 - Availability/approval authorization is server-authoritative.
 - Shared components are reused.
+- The interactive prototype keeps UI-only state in `PrototypeProvider`; asset photo documentation and issue reporting deliberately remain browser-session fixtures until the selected backend architecture is implemented.
 - Mobile and desktop consume the same business rules.
 - Prototype mock data is not treated as production persistence.
 - Environment-specific secrets never live in client code.
 - Provider SDK calls are isolated behind server-side repository, identity, and storage adapters.
 - Binary asset media lives in object storage; PostgreSQL stores metadata and object references.
+
+The current interactive prototype keeps fixture-backed domain data in `PrototypeProvider` and TypeScript contracts under `src/types`. New prototype rules should extend this existing boundary; do not introduce a parallel `domain/*.js` model or database layer. Manual WBS references are normalized as a separate entity related to requests by reference IDs. They remain in-memory until a persistence slice.

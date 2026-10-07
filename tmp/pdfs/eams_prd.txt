@@ -1,0 +1,380 @@
+
+===== PAGE 1 =====
+EAMS PRD v2.0 | Internal Product Baseline
+EVENT ASSET MANAGEMENT SYSTEM
+Product Requirements Document
+Version 2.0 - Product & Experience Definition
+Field Value
+Product Event Asset Management System (EAMS)
+Platforms Web Dashboard + Mobile Application
+Audience Internal Operations / Management / PIC + External Vendors
+Document Status Product Baseline for Design, Pitching and Development 
+Handover
+Source Baseline EAMS PRD v1.0 + product decisions captured during design 
+iteration
+Purpose: provide a single source of truth for the EAMS product, including platform responsibilities, asset lifecycle, roles, 
+workflows, data ownership, visibility, and operational rules.
+===== PAGE 2 =====
+EAMS PRD v2.0 | Internal Product Baseline
+1. Executive Summary
+EAMS is a centralized asset lifecycle management system for event and retail assets. It tracks assets from creation 
+through storage, deployment, transfer, maintenance, reuse, rebuild, recycling, and retirement.
+The system uses two connected platforms: Web Dashboard as the internal control and management layer, and Mobile as 
+the field execution layer used by internal teams and vendors.
+The original PRD defines the product around real-time availability, lifecycle monitoring, requests, recycling, and external 
+vendor visibility. This v2.0 preserves those foundations and adds the operational rules refined during product design, 
+especially transfer history, role-scoped visibility, photo evidence, condition inspection, master-data ownership, and 
+component reuse.
+2. Product Goals
+ Real-time visibility: know what asset exists, which brand owns it, where it is, its current status, and who is responsible.
+ Lifecycle tracking: preserve the complete operational history of each asset.
+ Controlled handover: every movement creates a traceable record with destination, responsible party, condition, 
+evidence, and approval where required.
+ Condition evidence: use standardized photos and structured damage records instead of free-text-only status.
+ Role-based access: internal users and vendor users see different levels of history and management data.
+ Reuse and recycling: distinguish between repair, reuse, rebuild, recycling, and retirement.
+3. Platform Strategy
+Capability Web Dashboard Mobile App
+Full asset management Yes No
+Asset search / visibility Yes Yes
+Master data Yes No
+Transfer / handover Yes Yes
+Condition inspection Yes Yes
+Full history Yes Role-scoped
+Requests Yes Yes
+Approval Yes Yes, for PIC on the go
+Vendor management Yes No
+Event / Store / Warehouse master data Yes No
+Recycling management Yes Status / notification only
+Reports / exports Yes No
+Bulk operations Yes Limited / no
+Settings / permissions Yes No
+Principle: Mobile executes the workflow; Web controls the system.
+4. Users and Roles
+Role Primary responsibility Access
+Internal Admin System configuration, master data, roles 
+and permissions Full
+Internal Management Monitoring, reporting, asset visibility, 
+decisions Full read; management actions
+Internal PIC / Ops Asset operations, approvals, conditions, 
+transfers Operational full access
+Internal Field Staff On-site asset visibility and execution Operational mobile access
+Vendor Handle assets assigned to the vendor, 
+transfer, condition updates, confirmation
+Scoped access to related assets and 
+history
+Vendor accounts represent the vendor organization, not individual vendor employees. Internal PICs are maintained 
+centrally and may display name, job title, phone, and email. Vendor-facing flows do not require individual vendor PIC 
+entry.
+===== PAGE 3 =====
+EAMS PRD v2.0 | Internal Product Baseline
+5. Asset Architecture
+5.1 Core Categories
+ Booth: Current Booth, Modular Booth (1x1 / 2x2 / 3x3), Reuse / Retired.
+ POSM: banners, standees, shelf talkers, display boards and related point-of-sale materials.
+ Inventories / Supporting Assets: furniture, props, lighting, technology equipment, consumables and other operational 
+items.
+5.2 Component / Parent-Child Structure
+A composite asset may contain reusable components. This is required for cases such as a booth where only the chairs 
+and tables are reused while the main structure stays in storage or is rebuilt.
+Example: Booth Colourverse -> Structure / Counter / Table / Chair x4 / Lighting.
+Each child component can carry its own status, location, condition, and movement history while remaining linked to the 
+parent asset.
+6. Asset Master Data
+Group Fields
+Identity Asset ID, Asset Name, Brand, Category, Type, Parent Asset ID, 
+Quantity
+Commercial Declared value, Purchase / Production cost
+Lifecycle Date created/developed, Current Status
+Location Current location, Current holder, Responsible party
+Vendor Vendor, vendor location, service type
+Condition Current condition, last inspection date
+Documentation Initial photos, current photos, notes, history
+7. Master Data Ownership
+The mobile app consumes controlled master data. Core entities cannot be invented ad hoc in the field.
+ Vendors are created and maintained by Internal users in Web.
+ Events are created and maintained by Internal users in Web.
+ Stores are created and maintained by Internal users in Web.
+ Warehouses are created and maintained by Internal users in Web.
+ Internal PIC profiles are created and maintained by Internal users in Web.
+ Mobile destination selection uses search over existing records; free-text creation is not allowed.
+8. Locations
+Location type Examples
+Event Wardah Colourverse Senayan 2026, Beauty Fest Jakarta
+Store Wardah Grand Indonesia, Kahf Store Senayan
+Vendor PT Kreasi Visual - Warehouse Jakarta, PT Repair Nusantara - 
+Workshop
+Warehouse HQ Warehouse Jakarta, Regional Warehouse Bandung
+9. Current Status and Holder
+The system separates who is responsible from where the asset physically is.
+Role view Displayed information
+Internal Responsible party (vendor or internal PIC) + current location
+Vendor Current location + vendor-context; individual internal PIC data 
+hidden
+===== PAGE 4 =====
+EAMS PRD v2.0 | Internal Product Baseline
+10. Status Model
+Status Meaning
+Available Ready for use
+In Use Currently deployed at an event/store/location
+Requested In active request workflow
+Maintenance Under repair or service
+Reuse Pool No longer in current deployment but retains reuse value
+Retired No longer an active operational asset
+11. Photo System
+Photos are evidence, not decoration. Initial asset photos and later condition photos are preserved as separate records.
+11.1 Initial photos
+ Minimum: front / side / detail.
+ Unlimited additional photos allowed.
+ Never overwritten by later condition photos.
+ Accessible through a full-screen gallery.
+11.2 Condition photos
+ Minimum required photo types: front / side / detail.
+ Unlimited additional photos.
+ Photo types: front, side, detail, damage, other.
+ Each photo stores timestamp, uploader, type, and condition session.
+12. Condition Inspection
+The inspection flow is guided so users cannot accidentally submit a condition record with incomplete evidence.
+Instruction shown to user: “Ambil minimal 3 foto aset: Tampak depan (full aset), Tampak samping / sudut, Detail (bagian 
+penting). Tambahkan foto kerusakan jika ada.”
+Condition Required additional information
+Siap dipakai No damage record required; required photo set must still be 
+complete.
+Ada kerusakan ringan Select affected photo(s), damage type / area, description. 
+Multiple damage entries allowed.
+Tidak bisa dipakai Select reason: Rusak total / Tidak digunakan lagi / Akan direbuild 
+/ Recycle.
+13. Transfer / Handover
+Transfer is a core action and is used for movement to another vendor, event, store, or warehouse.
+Destination selection always uses existing system records. A search field is available for fast lookup across Vendor, 
+Event, Store, and Warehouse.
+Step Behaviour
+1. Destination Choose category and search existing destination
+2. Responsible party Internal transfer may use a centrally managed PIC. Vendor 
+accounts represent the vendor entity.
+3. Condition Run guided condition inspection with photo evidence
+4. Confirmation Review from/to, destination, responsible party, condition and 
+evidence
+5. Approval Applied according to configured transfer policy
+6. Handover Receiving party confirms; asset state and history update
+===== PAGE 5 =====
+EAMS PRD v2.0 | Internal Product Baseline
+14. Approval Rules
+Approval policy is centrally managed and may vary by destination, asset class, or transfer type.
+ Vendor -> Vendor: internal approval required.
+ Vendor -> Internal: may require internal approval according to policy.
+ Internal -> Vendor: approval according to policy.
+ Vendor -> Event / Store: movement is recorded and follows configured policy.
+ Any approval creates an auditable decision record.
+15. Asset History / Timeline
+“Riwayat Aset” is a read-only lifecycle timeline. It is not the same as a “Check Condition” input form.
+ Asset Created / Origin
+ Transfer / Handover
+ Condition Update
+ Maintenance / Repair
+ Request / Reservation milestones
+ Reuse / Rebuild / Recycling transitions
+ Approval decisions
+Timeline entries are expandable. Each entry shows a concise summary first and can open into full detail, including photos 
+and notes.
+16. History Visibility Rules
+Role History visibility
+Internal
+Full timeline: origin, all transfers, all conditions, all vendors, all 
+PICs, all approvals, all photos, all maintenance and reuse 
+records.
+Vendor
+Scoped timeline only: entries directly related to that vendor while 
+it created, received, held, transferred, inspected, or handed over 
+the asset. Hide unrelated vendor activity and internal-only PIC 
+information.
+17. Request Module
+Requests allow users to request Booth, POSM or Inventory for an event or destination. Requests are routed to the 
+designated internal PIC.
+Stage Status
+1 Pending
+2 Approved
+3 Reserved
+4 Dispatched
+5 Returned
+Bulk Request is supported on Web for large events and may contain many asset lines in one request.
+18. Event Management
+Events are first-class master records rather than free-text destinations.
+Field Example
+Event Wardah Colourverse Senayan 2026
+Brand Wardah
+Venue Senayan City
+Start / End 10-15 Jun 2026
+Status Planning / Upcoming / Running / Completed / Cancelled
+===== PAGE 6 =====
+EAMS PRD v2.0 | Internal Product Baseline
+Assigned assets Linked asset list
+19. Store Management
+Stores are also master records and can hold assets independent of events.
+ Store name
+ Brand
+ Address / city
+ Operational status
+ Current assigned assets
+20. Vendor Management
+ Vendor profile and service type
+ Warehouse / workshop locations
+ Stored assets
+ Capacity
+ Retrieval lead time
+ Contact information
+ Last audit / condition
+ Active transfers
+ Approval status
+21. Monitoring
+ Age threshold alerts based on date developed; default 18 months and configurable by asset type.
+ Condition review alerts.
+ Vendor audit status.
+ Open requests and approval backlog.
+ Assets needing lifecycle decision.
+22. Reuse / Recycling Pipeline
+Lifecycle: Active Asset -> Flagged -> Reuse Pool -> PIC Review -> Dismantling -> Material Stock -> New Modular Asset.
+ Repair: keep the same asset and restore condition.
+ Reuse: deploy the same asset or component again.
+ Rebuild: dismantle and create a new configuration.
+ Recycle: convert into material stock.
+ Retire: no further operational value.
+23. Material Stock
+Materials recovered from dismantling become a trackable pool that can feed future modular builds.
+ Material type
+ Quantity
+ Source asset
+ Condition
+ Storage location
+ Available quantity
+ Linked future build
+===== PAGE 7 =====
+EAMS PRD v2.0 | Internal Product Baseline
+24. Mobile Screen Inventory
+Screen Purpose Roles
+Login Authentication All
+Home Quick status, search, notifications, request 
+entry All
+Asset List Search and category filters All
+QR Scanner Fast asset lookup Field / PIC
+Asset Detail Status, photos, holder, location, actions All
+Transfer Handover workflow Internal / Vendor
+Condition Guided inspection Internal / Vendor
+Request Submit request Internal / Vendor
+My Requests Track own requests All
+PIC Approval Quick approve/modify/reject PIC
+History Role-scoped lifecycle timeline Internal / Vendor
+Notifications Operational alerts All
+Profile Account and preferences All
+25. Web Screen Inventory
+Screen Purpose
+Dashboard Control tower overview
+Assets Unified asset table and management
+Asset Detail Full lifecycle, photos, requests, recycling state
+Asset Create/Edit Create and maintain assets
+Requests Request center and approval queue
+Vendors Vendor master and external asset view
+Events Event master and assigned assets
+Stores Store master and assigned assets
+Warehouses Warehouse master
+Monitoring Aging, condition and alerts
+Recycling Reuse Pool / dismantling / material pipeline
+Reports Utilization, cost avoidance, lifecycle reports
+Settings Thresholds, roles, brands, vendors, notifications
+26. Filtering and Search
+Filtering must use categories to reduce cognitive load instead of exposing many simultaneous controls.
+Platform Primary filters
+Mobile Brand, Location (Event / Store / Vendor / Warehouse), Status, 
+Search
+Web Brand, Asset Type, Location, Vendor, Event, Store, Status, 
+Lifecycle, Holder, Saved Views
+Mobile should optimize for fast lookup. Web should optimize for large-scale exploration and decision making.
+27. Notifications
+ Request approval / rejection
+ Transfer approval / rejection
+ Asset handover confirmation
+ Condition review required
+ Age threshold review
+ Reuse / recycling transitions
+ Overdue audit
+===== PAGE 8 =====
+EAMS PRD v2.0 | Internal Product Baseline
+28. Reports and Analytics - Web
+ Asset utilization rate
+ Availability by brand
+ Vendor-held asset count
+ Condition trends
+ Request turnaround
+ Reuse Pool size
+ Recycling conversion
+ Recovered material value
+ Cost avoidance
+ Asset aging
+29. Technical Notes
+ Authentication: SSO / email-password fallback, role-based access.
+ Web: React + TypeScript, state management, table component, charts and design tokens per original PRD baseline.
+ Mobile: React Native shared codebase, QR scanning, offline-first capability where required.
+ Notifications: Firebase Cloud Messaging + email.
+ Exports: XLSX / PDF from Web.
+ API: REST/JSON with live update channel for asset/request state where required.
+30. Core Data Objects
+Object Key fields
+Asset asset_id, brand, category, type, value, date_developed, status, 
+current_holder, current_location, vendor_id, parent_asset_id
+Asset Component component_id, parent_asset_id, type, quantity, status, location, 
+condition
+Vendor vendor_id, name, locations, contacts, service_type, capacity, 
+status
+Event event_id, brand_id, name, venue, dates, status
+Store store_id, brand_id, name, address, status
+Warehouse warehouse_id, type, owner, location, capacity, status
+PIC user_id, name, job_title, department, contact, role
+Transfer asset_id, from, to, purpose, PIC, condition, photos, 
+approval_state, timestamps
+Condition Log asset_id, condition, damage_items, photos, notes, created_by, 
+timestamp
+Request request_id, requester, brand, assets, quantity, destination, event, 
+dates, status
+History Entry entry_id, asset_id, event_type, actor, timestamp, visibility_scope, 
+payload
+31. Acceptance Criteria
+AC-01: Every asset has a unique Asset ID and initial photo set.
+AC-02: Initial photos remain accessible after later condition updates.
+AC-03: Condition inspection requires front, side and detail photo types before submission.
+AC-04: Additional photos and multiple damage entries are supported.
+AC-05: Every transfer creates an immutable history entry.
+AC-06: Every condition update creates an immutable history entry.
+AC-07: Internal users can view full lifecycle history.
+AC-08: Vendors can view only related lifecycle entries.
+AC-09: Mobile destination selection uses existing master records; no manual creation.
+===== PAGE 9 =====
+EAMS PRD v2.0 | Internal Product Baseline
+AC-10: PIC master data is maintained only in Web.
+AC-11: Vendor accounts represent vendor organizations rather than individual vendor PICs.
+AC-12: Vendor-to-vendor transfers support approval and confirmation.
+AC-13: Assets support parent-child components for partial reuse.
+AC-14: Bulk request supports many asset lines for large events.
+AC-15: Web supports category-based filters and saved operational views.
+AC-16: Reuse / rebuild / recycle outcomes are recorded explicitly.
+32. Success Metrics
+Metric Target
+Asset Utilization >85% tracked assets have verified status
+Recycling Conversion >60% of reuse-pool assets converted to material within 60 days
+Request Turnaround PIC response <24 hours for standard requests
+Cost Avoidance 30% reduction in new booth procurement through reuse
+33. Product Principles for Handover
+ Do not treat the mobile app as a mini ERP.
+ Do not make master data editable by vendors.
+ Do not overwrite history with current state changes.
+ Do not rely on free text for critical destinations.
+ Do not use “condition” as a single generic status without evidence.
+ Keep initial asset photos separate from latest condition photos.
+ Use the Web Dashboard as the authoritative control plane.
+ Use Mobile as the fast operational execution surface.
+34. Design Handoff Notes
+This document is intended as the baseline for generating the next Figma Make prototype and for handing the concept to 
+product / engineering teams. The system should be prototyped end-to-end with realistic example data rather than generic 
+placeholder Vendor A / Vendor B content.
+Recommended prototype scenario: Wardah asset -> created by a vendor -> deployed to a major event -> returned to 
+vendor warehouse -> transferred to another maintenance vendor -> deployed to a store -> inspected again -> partially 
+reused / rebuilt.
