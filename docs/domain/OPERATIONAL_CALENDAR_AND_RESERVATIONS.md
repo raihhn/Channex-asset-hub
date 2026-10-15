@@ -47,7 +47,7 @@ The prototype also retains the pre-existing `Asset.blockedRanges` fixture check 
 
 A reservation means planned occupancy only. It does not alter `Asset.location`, custodian, availability/lifecycle status, or Movement/Transfer records. Current location and custodian remain tied to actual operations.
 
-The Transfer/Handover screen remains local-only and does not create authoritative outbound evidence. Slice 4 adds an in-memory ReturnReceipt canonically linked by `requestItemId`; `requestId` and `assetId` retain context and lookup value. Only Confirm Received records `receivedAt`, receiving PIC/location, condition, and notes. Reservation `actualInboundAt` is derived from that item receipt, never from a planned date or Request/item status. Start Return alone is not receipt. See [Return Workflow](RETURN_WORKFLOW.md).
+The separate Transfer screen records explicit prototype dispatch and receiving confirmation (see `TRANSFER_WORKFLOW.md`), while this booking calendar derives only booking movements. Transfer plans alone remain no evidence of movement. Slice 4 adds an in-memory ReturnReceipt canonically linked by `requestItemId`; `requestId` and `assetId` retain context and lookup value. Only Confirm Received records `receivedAt`, receiving PIC/location, condition, and notes. Reservation `actualInboundAt` is derived from that item receipt, never from a planned date or Request/item status. Start Return alone is not receipt. See [Return Workflow](RETURN_WORKFLOW.md).
 
 Planned state derivation uses browser-local current time:
 
@@ -80,3 +80,7 @@ The following remain intentionally unresolved and must not be guessed in this sl
 8. Backend concurrency/locking strategy and durable receipt storage.
 9. Timezone policy for persisted timestamps.
 10. How to reconcile legacy `Completed` Requests whose physical items have no receipt evidence. The prototype conservatively keeps those items reserved; it never fabricates a receipt, actual inbound, or Inbound Completed marker.
+
+## Actual outbound follow-up
+
+Approved Request dispatch and usage-destination receipt are now implemented as explicit frontend prototype evidence. See [Approved Request Outbound](OUTBOUND_WORKFLOW.md). Historical records are not inferred. This supersedes the planning-only outbound limitation for newly recorded handovers; automatic Return tasks/reminders and durable operational records remain pending.

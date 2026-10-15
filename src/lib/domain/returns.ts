@@ -3,6 +3,7 @@ import type {
   AssetCondition,
   PrototypeRequest,
   ReturnReceipt,
+  RequestDocument,
 } from "@/types/prototype";
 import type { RegisteredLocation } from "@/lib/fixtures/registered-locations";
 
@@ -57,9 +58,27 @@ export function initiateReturn(
   requestItemId: string,
   initiatedBy: string,
   initiatedAt: string,
+  loadingOutLetters: RequestDocument[] = [],
 ) {
   const item = assertPhysicalItem(request, requestItemId);
   if (!initiatedBy.trim()) throw new Error("Return initiator is required.");
+  if (
+    loadingOutLetters.length > 5 ||
+    loadingOutLetters.some(
+      (file) =>
+        file.category !== "Loading-out letter" ||
+        !file.name.trim() ||
+        file.size > 5 * 1024 * 1024 ||
+        file.size < 0 ||
+        !(
+          file.mimeType === "application/pdf" ||
+          file.mimeType.startsWith("image/")
+        ),
+    )
+  )
+    throw new Error(
+      "Attach up to 5 loading-out letters, PDF or image, 5 MB each.",
+    );
   if (findReturnReceipt(receipts, requestItemId)) {
     throw new Error("Return has already been initiated for this item.");
   }
@@ -72,6 +91,9 @@ export function initiateReturn(
       assetId: item.assetId,
       initiatedAt,
       initiatedBy: initiatedBy.trim(),
+      ...(loadingOutLetters.length
+        ? { loadingOutLetters: loadingOutLetters.map((file) => ({ ...file })) }
+        : {}),
     },
   ];
 }

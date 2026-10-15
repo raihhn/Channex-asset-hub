@@ -81,3 +81,11 @@ The frontend prototype may show an authorized approver queue with pending reques
 ## Booking request items
 
 A booking request contains one or more request items, rather than a single asset reference. Each item identifies the asset and requested quantity where the asset supports quantity. The request owns the shared booking dates, destination, purpose, contact, notes, and approval state. Availability must be evaluated per request item, so a request may show a partial/conflicting fixture result before it can be submitted.
+
+## Quantity/UoM capture and borrowing — local prototype
+
+Each asset may carry `unitPolicy` with `stockUnit`, optional `packageUnit`, and a validated positive whole-number `unitsPerPackage`. Unknown conversions are never inferred. Intact or unknown-content Dus/Box/Pack uses that unit directly; loose borrowing requires a configured conversion to Pcs. Package choices describe equivalent quantities, not a guarantee of sealed packaging. Single-unit records retain quantity one. Existing fixtures without a policy use Set for Booth and Unit for other categories.
+
+Add Asset captures the opening count in the selected unit; opened-package stock is converted once into Pcs. Request quantities, eligibility and downstream receipt quantities remain in the stock unit. A multi-unit picker is shown only for configured conversions with enough stock for one package; fixed-unit records display their unit without a picker. Plus/minus changes are clamped in whole selected packages, never a fraction of a package. No stock-opname ledger or cross-request quantity allocation engine is established by this slice.
+
+Add Asset now registers an in-memory, audited record for prototype StoreDev/Super Admin users. It is unavailable with inspection pending and no fabricated documentation or acquisition date. Refresh loses these records. This does not create persistent PostgreSQL asset records or production scope-based registration authorization; durable booking cannot book session-only asset IDs. Existing documentation/inspection guards are retained. Asset spreadsheet import is separate and has not been run.

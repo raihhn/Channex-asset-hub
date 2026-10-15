@@ -32,6 +32,7 @@ export function MeScreen() {
             <strong>My requests</strong>
             <span>Track bookings and next actions</span>
           </Link>
+          <Link href="/transfers" aria-label="Transfers"><strong>Transfers</strong><span>Track warehouse and workshop movements</span></Link>
           <Link href="/requests/approvals">
             <strong>Approval queue</strong>
             <span>Authorized prototype access</span>

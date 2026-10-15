@@ -57,17 +57,19 @@ Route -> large one-off JSX + arbitrary Tailwind + duplicated interaction logic.
 Reusable domain components should support Asset Health summaries, issue/maintenance records, documentation checklist, request item lists, availability rows, selected-item cart, and operational queue entries. Setup suggestions compose existing asset/request-item UI; they do not become a parallel asset hierarchy.
 ## Layering rule
 
-`components/ui/` contains the existing official shadcn/ui primitives. New additions use the React Aria `aria-maia` base configured in `components.json`. Product routes are the single source of truth; `/ui-option-2` redirects to `/` and must not grow into a second app. `components/shared/` contains reusable AssetHub compositions, and `components/domain/` contains asset/request domain compositions. Features compose those layers; they do not introduce bespoke controls when a shadcn primitive is suitable. Existing feature-level HeroUI usage is legacy migration surface and should be replaced incrementally with shared shadcn-based compositions without changing product behavior.
+HeroUI React v3 provides the base primitives. `components/shared/` contains reusable AssetHub compositions, and `components/domain/` contains asset/request domain compositions. Features compose these layers. `/ui-option-2` redirects to `/`; product routes remain the single source of truth.
 
-New Request uses Popover + Command for Event / Activation discovery, Select for Brand filtering, Badge for readiness and semantic status, Input for dates and ad-hoc fields, and Sheet for contextual asset inspection. The responsive sheet becomes a bottom-oriented surface on mobile through composition styling, without creating a second primitive.
+New Request uses shared HeroSelect for event and filter selection, Chip for semantic status, Input/TextArea for fields, Card for grouped content, and Modal for the mobile selected-assets surface. Preserve its four-step flow and validation.
 
-Layout ownership is separate from primitive ownership: Tailwind utilities own responsive grid/flex composition and spacing, while AssetHub tokens own semantic colors, typography, radius, and status meaning. Shared/domain components such as AssetCard, AssetGallery, AssetStatus, RequestStatus, FulfillmentGroup, ReadinessItem, and AssetHealthSummary remain valid product patterns and should compose shadcn primitives rather than duplicate them.
+Tailwind utilities own responsive layout and spacing; AssetHub tokens own colors, typography, radius, and status meaning. AssetCard, AssetGallery, AssetStatus, RequestStatus, FulfillmentGroup, ReadinessItem, and AssetHealthSummary remain shared/domain patterns.
 
 ## Foundation inventory
 
-- KEEP: `src/components/ui/*` official shadcn primitives, `src/styles/tokens.css`, `src/lib/utils/*`, and shared/domain compositions.
-- REFACTOR: legacy feature selectors in `src/app/globals.css` as screens are touched; move ordinary layout to Tailwind utilities and keep only global normalization or justified product composition rules.
-- REMOVED: dead bespoke event menu and legacy asset-context overlay rules after migration to shadcn Popover/Command and Sheet.
-- ABSENT: CSS Modules and inline style geometry in the current `src` application.
+- KEEP: HeroUI v3 dependencies, `src/styles/tokens.css`, shared/domain compositions, and utility helpers.
+- REFACTOR: existing feature selectors in `src/app/globals.css` when screens are touched; use Tailwind for ordinary layout.
+- REMOVED: shadcn source folders, configuration, and unused Radix/cmdk/vaul/date-picker dependencies.
+- ABSENT: feature CSS Modules and inline style geometry.
 
-Primitive ownership is not duplicated: Input owns its border/focus surface, Checkbox owns its control, Popover/Command own their portal surface, and Sheet owns its overlay/stacking behavior. AssetHub components add content and domain semantics above those primitives.
+HeroUI owns field focus/borders, checkbox controls, and portal surfaces. AssetHub compositions add product content and domain behavior.
+
+Shared HeroSelect composes HeroUI v3 Select with Autocomplete.Filter and a SearchField inside its popup. All choice dropdowns, including Event Master Brand/Parent/Status, use this shared composition. Search is case/accent-insensitive and matches all typed words against option labels. Query text never changes the governed selection; only choosing an existing option does. Popups provide a clear-search action, no-match feedback, keyboard navigation and Escape dismissal, with a fresh query on reopen.

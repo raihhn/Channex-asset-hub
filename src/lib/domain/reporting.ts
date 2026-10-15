@@ -140,6 +140,9 @@ export function deriveOperationalReport(input: ReportInput): ReportEntry[] {
   for (const plan of input.transferPlans) {
     const asset = assetById.get(plan.assetId);
     add({ id: `transfer:${plan.id}`, occurredAt: plan.submittedAt, category: "Transfer", type: "Transfer planned", summary: `${asset?.name ?? plan.assetId} · handover plan submitted`, status: "Planned only", sourceEntityType: "TRANSFER_PLAN", sourceEntityId: plan.id, assetIds: asset ? [asset.id] : [], brandId: canonicalBrandId(asset?.brand), wbsReferenceIds: [], referenceNumbers: referenceNumbers([]), location: getRegisteredLocation(plan.destinationId)?.name ?? plan.destinationId });
+    const physicalBase = {category: "Transfer" as const, sourceEntityType: "TRANSFER_PLAN", sourceEntityId: plan.id, assetIds: asset ? [asset.id] : [], brandId: canonicalBrandId(asset?.brand), wbsReferenceIds: [], referenceNumbers: referenceNumbers([]), location: getRegisteredLocation(plan.destinationId)?.name ?? plan.destinationId};
+    if (plan.dispatchedAt) add({...physicalBase,id:`transfer:dispatched:${plan.id}`,occurredAt:plan.dispatchedAt,type:"Transfer dispatched",summary:`${asset?.name ?? plan.assetId} · ${plan.sourceLocation} → ${physicalBase.location} · ${plan.senderPic}`,status:"In transit",actorUserId:plan.dispatchedByUserId,actorName:personById.get(plan.dispatchedByUserId ?? "")?.name});
+    if (plan.dispatchedAt && plan.receivedAt) add({...physicalBase,id:`transfer:received:${plan.id}`,occurredAt:plan.receivedAt,type:"Transfer received",summary:`${asset?.name ?? plan.assetId} · received by ${plan.receiverPic} · ${plan.conditionAtReceipt}`,status:"Received",actorUserId:plan.receivedByUserId,actorName:personById.get(plan.receivedByUserId ?? "")?.name});
   }
 
   for (const receipt of input.returnReceipts) {

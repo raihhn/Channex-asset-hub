@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 import { PrototypeProvider } from "@/features/prototype/prototype-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 
@@ -22,9 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <TooltipProvider>
-          <PrototypeProvider>{children}</PrototypeProvider>
-        </TooltipProvider>
+        <PrototypeProvider>{children}</PrototypeProvider>
       </body>
     </html>
   );

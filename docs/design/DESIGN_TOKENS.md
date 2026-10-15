@@ -30,12 +30,15 @@ Use Inter Variable across the application, with `Inter`, `ui-sans-serif`, and `s
 
 | Role | Size | Weight | Line height |
 |---|---:|---:|---:|
-| Page title | `clamp(1.75rem, 3vw, 2.25rem)` | 700 | 1.15 |
-| Section title | 1.125rem | 600 | 1.3 |
-| Card / drawer title | 1rem | 600 | 1.35 |
+| Page title | `clamp(1.875rem, 3vw, 2.25rem)` | 600 | 1.17 |
+| Section title | 1.25rem | 600 | 1.33 |
+| Card / drawer title | 1rem | 600 | 1.5 |
 | Body | 1rem | 400 | 1.5 |
-| UI label / button | 0.875rem | 500 | 1.25 |
-| Secondary / metadata | 0.75rem | 400 | 1.4 |
-| Small caption | 0.6875rem | 400 | 1.4 |
+| UI label / button | 0.875rem | 500 | 1.5 |
+| Secondary / metadata | 0.875rem | 400 | 1.5 |
+| Small caption | 0.75rem | 400 | 1.25 |
 
 Use these roles through the shared tokens in `src/styles/tokens.css`. Component-specific exceptions must be rare, purposeful, and must not create a second scale for the same role.
+
+
+The scale follows HeroUI typography sizes and weights. Operational section titles use the h4 visual size, card titles use h6, and secondary copy uses body-sm. Page titles adapt from 30px on mobile to 36px on desktop. Body line height stays compact for operational forms. HeroUI controls own their font sizing and weight; do not force controls to inherit a surrounding label weight. Use semibold for primary entity names, medium for labels, and regular for addresses and editable values.

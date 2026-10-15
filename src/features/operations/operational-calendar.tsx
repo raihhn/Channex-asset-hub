@@ -172,7 +172,10 @@ export function OperationalCalendar({
             aria-label="Previous month"
             isIconOnly
             onPress={() =>
-              setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
+              setMonth(
+                (current) =>
+                  new Date(current.getFullYear(), current.getMonth() - 1, 1),
+              )
             }
             variant="secondary"
           >
@@ -183,7 +186,10 @@ export function OperationalCalendar({
             aria-label="Next month"
             isIconOnly
             onPress={() =>
-              setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
+              setMonth(
+                (current) =>
+                  new Date(current.getFullYear(), current.getMonth() + 1, 1),
+              )
             }
             variant="secondary"
           >
@@ -365,6 +371,26 @@ export function OperationalCalendar({
                       {reservation.usageEndAt.slice(0, 10)} → Planned inbound{" "}
                       {reservation.inboundAt.replace("T", " · ")}
                     </small>
+                    {reservation.actualOutboundAt ? (
+                      <small>
+                        Actual outbound ·{" "}
+                        {new Date(reservation.actualOutboundAt).toLocaleString(
+                          "en-GB",
+                          { dateStyle: "medium", timeStyle: "short" },
+                        )}
+                      </small>
+                    ) : null}
+                    {reservation.destinationReceivedAt ? (
+                      <small>
+                        Destination receipt ·{" "}
+                        {new Date(
+                          reservation.destinationReceivedAt,
+                        ).toLocaleString("en-GB", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </small>
+                    ) : null}
                     {reservation.actualInboundAt ? (
                       <small>
                         Actual inbound{" "}
@@ -411,8 +437,9 @@ export function OperationalCalendar({
       </div>
       <p className="operational-calendar__note">
         Dates use the browser’s local timezone. Calendar entries are planned
-        reservations, not proof of physical departure. Inbound Completed and
-        actual arrival appear only after a linked Confirm Received action.
+        reservations. Actual outbound and destination receipt come from
+        confirmed handovers; Inbound Completed and actual return arrival require
+        a linked Confirm Received action.
       </p>
       {monthReservations.length === 0 ? (
         <p className="operational-calendar__empty">

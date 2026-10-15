@@ -11,6 +11,8 @@ import { getSubEvents } from "@/lib/domain/events";
 import type { EventDraft } from "@/types/prototype";
 import { PeopleMasterScreen } from "@/features/admin/people-master-screen";
 import { AuditTrailScreen } from "@/features/admin/audit-trail-screen";
+import { VendorMasterScreen } from "@/features/admin/vendor-master-screen";
+import { HeroSelect } from "@/components/shared/hero-select";
 import { userHasRole } from "@/lib/domain/people";
 
 export function AdminScreen({ section }: { section?: string }) {
@@ -18,21 +20,22 @@ export function AdminScreen({ section }: { section?: string }) {
   const isSuperAdmin = userHasRole(currentUser, "SUPER_ADMIN");
   const isPeopleSection = section === "users";
   const isAuditSection = section === "audit";
+  const isVendorSection = section === "warehouses-vendors";
   const data = section ? administrationData[section] : undefined;
   return (
-    <AppShell pageLabel={isPeopleSection ? "People" : isAuditSection ? "Audit Trail" : data?.title ?? "Administration"}>
+    <AppShell pageLabel={isPeopleSection ? "People" : isAuditSection ? "Audit Trail" : isVendorSection ? "Vendors" : data?.title ?? "Administration"}>
       <div className="admin-screen">
         <section className="screen-intro admin-screen__intro">
           <p>{data?.eyebrow ?? "Administration"}</p>
-          <h1>{isPeopleSection ? "People / Users" : isAuditSection ? "Audit Trail" : data?.title ?? "Master Data"}</h1>
+          <h1>{isPeopleSection ? "People / Users" : isAuditSection ? "Audit Trail" : isVendorSection ? "Vendors" : data?.title ?? "Master Data"}</h1>
           <span>
-            {isPeopleSection ? "Configure prototype identity, roles, and organizational scope." : isAuditSection ? "Important changes across AssetHub, with actor and record context." : data
+            {isPeopleSection ? "Configure prototype identity, roles, and organizational scope." : isAuditSection ? "Important changes across AssetHub, with actor and record context." : isVendorSection ? "Manage vendors, their warehouses, and PIC contacts." : data
               ? "Review the operational reference data used across AssetHub."
               : "Manage the operational reference structure behind assets, requests, and approvals."}
           </span>
         </section>
         {isSuperAdmin ? <nav className="admin-screen__quick-nav mb-4 flex flex-wrap gap-3" aria-label="Administration tools"><Link className="rounded-lg border border-border bg-card px-4 py-2" href="/admin/users">People / Users</Link><Link className="rounded-lg border border-border bg-card px-4 py-2" href="/admin/audit">Audit Trail</Link></nav> : null}
-        {(isPeopleSection || isAuditSection) && !isSuperAdmin ? <Card className="p-6"><strong>Global administration is not visible for this prototype user.</strong><p>Switch to the Super Admin fixture in Me to review People and Audit Trail. This is not production authorization.</p></Card> : isPeopleSection ? <PeopleMasterScreen /> : isAuditSection ? <AuditTrailScreen /> : !data ? <AdminDirectory isSuperAdmin={isSuperAdmin} /> : section === "events" ? <EventMasterData /> : <AdminTable data={data} />}
+        {(isPeopleSection || isAuditSection || isVendorSection) && !isSuperAdmin ? <Card className="p-6"><strong>Global administration is not visible for this prototype user.</strong><p>Switch to the Super Admin fixture in Me to review People and Audit Trail. This is not production authorization.</p></Card> : isPeopleSection ? <PeopleMasterScreen /> : isAuditSection ? <AuditTrailScreen /> : isVendorSection ? <VendorMasterScreen key={currentUser.id} /> : !data ? <AdminDirectory isSuperAdmin={isSuperAdmin} /> : section === "events" ? <EventMasterData /> : <AdminTable data={data} />}
       </div>
     </AppShell>
   );
@@ -53,9 +56,9 @@ function EventMasterData() {
   return <div className="admin-screen__event-data">
     <Card className="data-panel"><form className="event-master-form" onSubmit={save}>
       <div className="data-panel__bar"><strong>{editingId ? "Edit event" : "Add event"}</strong><div><Button onPress={reset} size="sm" variant="secondary" type="button">Clear</Button><Button size="sm" type="submit" variant="primary">Save event</Button></div></div>
-      <div className="event-master-form__grid">{field("name", "Event name")}<label className="event-master-field">Brand<select value={form.brand} onChange={(input) => { const brand = input.currentTarget.value; setForm((item) => ({ ...item, brand })); }}>{administrationData.brands.rows.filter((brand) => brand.Status === "Active").map((brand) => <option key={brand.Code} value={brand.Name}>{brand.Name}</option>)}</select></label>{field("campaign", "Campaign")}{field("venue", "Venue")}{field("city", "City")}{field("startDate", "Start date", "date")}{field("endDate", "End date", "date")}{field("pic", "PIC")}
-        <label className="event-master-field">Parent event<select value={form.parentEventId ?? ""} onChange={(input) => { const parentEventId = input.currentTarget.value || null; setForm((item) => ({ ...item, parentEventId })); }}><option value="">No parent (standalone or parent)</option>{parentOptions.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}</select></label>
-        <label className="event-master-field">Status<select value={form.status} onChange={(input) => { const status = input.currentTarget.value as EventDraft["status"]; setForm((item) => ({ ...item, status })); }}><option>Planned</option><option>Active</option><option>Completed</option></select></label>
+      <div className="event-master-form__grid">{field("name", "Event name")}<HeroSelect label="Brand" value={form.brand} onChange={(brand) => setForm((item) => ({...item,brand}))} options={administrationData.brands.rows.filter((brand) => brand.Status === "Active").map((brand) => ({label:brand.Name,value:brand.Name}))} />{field("campaign", "Campaign")}{field("venue", "Venue")}{field("city", "City")}{field("startDate", "Start date", "date")}{field("endDate", "End date", "date")}{field("pic", "PIC")}
+        <HeroSelect label="Parent event" value={form.parentEventId ?? "__none__"} onChange={(parentEventId) => setForm((item) => ({...item,parentEventId:parentEventId === "__none__" ? null : parentEventId || null}))} options={[{label:"No parent (standalone or parent)",value:"__none__"},...parentOptions.map((event) => ({label:event.name,value:event.id}))]} />
+        <HeroSelect label="Status" value={form.status} onChange={(status) => setForm((item) => ({...item,status:status as EventDraft["status"]}))} options={["Planned","Active","Completed"].map((status) => ({label:status,value:status}))} />
       </div>{error ? <p role="alert">{error}</p> : null}
     </form></Card>
     <Card className="data-panel"><div className="data-panel__bar"><strong>{events.length} events · hierarchy shown</strong></div><div className="data-table-wrap"><Table><Table.ScrollContainer><Table.Content aria-label="Event master data"><Table.Header><Table.Column isRowHeader>Event</Table.Column><Table.Column>Brand</Table.Column><Table.Column>Parent / children</Table.Column><Table.Column>Venue</Table.Column><Table.Column>Dates</Table.Column><Table.Column>Status</Table.Column><Table.Column aria-label="Actions" /></Table.Header><Table.Body>{events.map((event) => { const parent = events.find((candidate) => candidate.id === event.parentEventId); const children = getSubEvents(events, event.id); return <Table.Row id={event.id} key={event.id}><Table.Cell>{event.name}</Table.Cell><Table.Cell>{event.brand}</Table.Cell><Table.Cell>{parent ? `↳ ${parent.name}` : children.length ? `${children.length} sub-events: ${children.map((child) => child.name).join(", ")}` : "Standalone"}</Table.Cell><Table.Cell>{event.venue}, {event.city}</Table.Cell><Table.Cell>{event.startDate} – {event.endDate}</Table.Cell><Table.Cell><Chip size="sm" variant="soft">{event.status}</Chip></Table.Cell><Table.Cell><Button className="table-action" onPress={() => { setEditingId(event.id); setForm(event); setError(""); }} size="sm" variant="ghost">Edit</Button></Table.Cell></Table.Row>; })}</Table.Body></Table.Content></Table.ScrollContainer></Table></div><p className="event-master-note">Referenced events are not deleted here. Change status to Completed to remove an event from new-request selection.</p></Card>

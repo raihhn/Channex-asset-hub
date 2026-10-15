@@ -1,6 +1,6 @@
 import { StatusLegend } from "@/components/domain/status-legend";
 import { PageSection } from "@/components/shared/page-section";
-import { Button } from "@/components/ui/button";
+import { Button } from "@heroui/react";
 
 type FoundationPreviewProps = { sessionSource: string; workspaceName: string };
 

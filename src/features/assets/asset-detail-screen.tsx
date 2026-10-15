@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Button } from "@heroui/react";
+import { Button, Card } from "@heroui/react";
 
 import { AssetGallery } from "@/components/domain/asset-gallery";
 import { AssetClassification } from "@/components/domain/asset-classification";
 import { AssetIssueSummary } from "@/components/domain/asset-issue-summary";
 import { AssetStatus } from "@/components/domain/asset-status";
 import { DocumentationChecklist } from "@/components/domain/documentation-checklist";
+import { WorkflowDisclosure } from "@/components/shared/workflow-disclosure";
 import { AppShell } from "@/components/shared/app-shell";
 import { usePrototype } from "@/features/prototype/prototype-provider";
 import { isOperationallySelectable } from "@/lib/fixtures/request-eligibility";
@@ -17,10 +18,36 @@ import { deriveReservations } from "@/lib/domain/reservations";
 import { activeMaintenanceForAsset } from "@/lib/domain/maintenance";
 
 export function AssetDetailScreen({ assetId }: { assetId: string }) {
-  const { assets, events, requests, returnReceipts, maintenanceRecords } = usePrototype();
+  const {
+    assets,
+    assetLoading,
+    assetError,
+    events,
+    requests,
+    returnReceipts,
+    outboundDispatches,
+    maintenanceRecords,
+  } = usePrototype();
   const asset = assets.find((item) => item.id === assetId);
   const [historyFilter, setHistoryFilter] = useState("All");
-  if (!asset) return null;
+  if (assetLoading)
+    return (
+      <AppShell pageLabel="Asset detail">
+        <p role="status">Loading asset database…</p>
+      </AppShell>
+    );
+  if (assetError)
+    return (
+      <AppShell pageLabel="Asset detail">
+        <p role="alert">{assetError}</p>
+      </AppShell>
+    );
+  if (!asset)
+    return (
+      <AppShell pageLabel="Asset detail">
+        <p>Asset not found.</p>
+      </AppShell>
+    );
   const latestReceipt = returnReceipts
     .filter((receipt) => receipt.assetId === asset.id && receipt.receivedAt)
     .sort((first, second) =>
@@ -33,6 +60,7 @@ export function AssetDetailScreen({ assetId }: { assetId: string }) {
     assets,
     events,
     returnReceipts,
+    outboundDispatches,
   )
     .filter(
       (reservation) =>
@@ -47,14 +75,82 @@ export function AssetDetailScreen({ assetId }: { assetId: string }) {
   );
   const requestable =
     isOperationallySelectable(asset) && !completedWithoutReceipt;
-  const activeMaintenance = activeMaintenanceForAsset(maintenanceRecords, asset.id);
-  const maintenanceHistory = maintenanceRecords.filter((record) => record.assetId === asset.id);
+  const activeMaintenance = activeMaintenanceForAsset(
+    maintenanceRecords,
+    asset.id,
+  );
+  const maintenanceHistory = maintenanceRecords.filter(
+    (record) => record.assetId === asset.id,
+  );
   return (
     <AppShell pageLabel="Asset detail">
       <div className="asset-detail-screen">
         <Link className="back-link" href="/assets">
           ← All assets
         </Link>
+        {asset.importInfo ? (
+          <Card className="border-border mb-6 gap-3 border p-4 sm:p-6">
+            <Card.Header>
+              <Card.Title>Imported asset data</Card.Title>
+              <Card.Description>
+                {asset.importInfo.sheet} · Row {asset.importInfo.row}
+              </Card.Description>
+            </Card.Header>
+            <Card.Content className="grid gap-3 text-sm">
+              <WorkflowDisclosure
+                title={`Source details${asset.importInfo.warnings.length ? ` · ${asset.importInfo.warnings.length} items need confirmation` : ""}`}
+              >
+                <p>
+                  Stock: {asset.totalQuantity ?? "Belum diisi"}{" "}
+                  {asset.unitPolicy?.stockUnit ?? "UoM belum diisi"}
+                </p>
+                <p>
+                  Source quantity: {asset.importInfo.sourceQty || "Belum diisi"}{" "}
+                  {asset.importInfo.sourceUnit}
+                </p>
+                {asset.importInfo.eventName ? (
+                  <p>Event / collection: {asset.importInfo.eventName}</p>
+                ) : null}
+                {asset.importInfo.setupName ? (
+                  <p>Setup: {asset.importInfo.setupName} · Independent asset</p>
+                ) : null}
+                <p>Warehouse: {asset.location}</p>
+                <p>Owner: {asset.importInfo.ownerName || "Belum diisi"}</p>
+                <p>PIC: {asset.responsiblePic || "Belum diisi"}</p>
+                <p>
+                  Source status:{" "}
+                  {asset.importInfo.sourceStatus || "Belum diisi"} · Physical
+                  confirmation:{" "}
+                  {asset.importInfo.physicalConfirmation || "Belum diperiksa"}
+                </p>
+                {asset.importInfo.notes ? (
+                  <p className="whitespace-pre-wrap">
+                    Notes: {asset.importInfo.notes}
+                  </p>
+                ) : null}
+                {asset.importInfo.reference ? (
+                  <p>PO / Invoice reference: {asset.importInfo.reference}</p>
+                ) : null}
+                {asset.importInfo.sourceDate ? (
+                  <p>
+                    Source event / usage / received date:{" "}
+                    {asset.importInfo.sourceDate} (meaning needs confirmation)
+                  </p>
+                ) : null}
+                {asset.importInfo.warnings.length ? (
+                  <div>
+                    <p className="font-medium">Needs confirmation</p>
+                    <ul className="list-disc space-y-1 pl-5">
+                      {asset.importInfo.warnings.map((warning, index) => (
+                        <li key={index}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </WorkflowDisclosure>
+            </Card.Content>
+          </Card>
+        ) : null}
         <div className="asset-detail-layout">
           <div className="asset-detail-artwork">
             <AssetGallery asset={asset} />
@@ -143,10 +239,50 @@ export function AssetDetailScreen({ assetId }: { assetId: string }) {
         </section>
         <AssetIssueSummary asset={asset} />
         <section className="asset-health" aria-label="Maintenance records">
-          <div><p>Asset operations</p><h2>Maintenance</h2></div>
-          {activeMaintenance ? <p><strong>Active: {activeMaintenance.status}</strong> · <Link href={`/maintenance/${activeMaintenance.id}`}>Open {activeMaintenance.id} →</Link></p> : <Link href={`/maintenance/new?assetId=${asset.id}`}>Create maintenance →</Link>}
-          {!activeMaintenance && asset.issues.filter((issue) => issue.status !== "Resolved").length ? <div className="space-y-1">{asset.issues.filter((issue) => issue.status !== "Resolved").map((issue) => <p key={issue.id}><Link href={`/maintenance/new?assetId=${asset.id}&issueId=${issue.id}`}>Create maintenance from {issue.type} issue →</Link></p>)}</div> : null}
-          {maintenanceHistory.length ? <ul>{maintenanceHistory.map((record) => <li key={record.id}><Link href={`/maintenance/${record.id}`}>{record.id}</Link> · {record.status} · {record.reason}</li>)}</ul> : <p>No maintenance records in this session.</p>}
+          <div>
+            <p>Asset operations</p>
+            <h2>Maintenance</h2>
+          </div>
+          {activeMaintenance ? (
+            <p>
+              <strong>Active: {activeMaintenance.status}</strong> ·{" "}
+              <Link href={`/maintenance/${activeMaintenance.id}`}>
+                Open {activeMaintenance.id} →
+              </Link>
+            </p>
+          ) : (
+            <Link href={`/maintenance/new?assetId=${asset.id}`}>
+              Create maintenance →
+            </Link>
+          )}
+          {!activeMaintenance &&
+          asset.issues.filter((issue) => issue.status !== "Resolved").length ? (
+            <div className="space-y-1">
+              {asset.issues
+                .filter((issue) => issue.status !== "Resolved")
+                .map((issue) => (
+                  <p key={issue.id}>
+                    <Link
+                      href={`/maintenance/new?assetId=${asset.id}&issueId=${issue.id}`}
+                    >
+                      Create maintenance from {issue.type} issue →
+                    </Link>
+                  </p>
+                ))}
+            </div>
+          ) : null}
+          {maintenanceHistory.length ? (
+            <ul>
+              {maintenanceHistory.map((record) => (
+                <li key={record.id}>
+                  <Link href={`/maintenance/${record.id}`}>{record.id}</Link> ·{" "}
+                  {record.status} · {record.reason}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No maintenance records in this session.</p>
+          )}
         </section>
         <section className="asset-health" aria-label="Asset schedule">
           <div>
@@ -303,7 +439,7 @@ export function AssetDetailScreen({ assetId }: { assetId: string }) {
               ))}
           </ol>
         </section>
-        <div className="sticky-action">
+        <div className={requestable ? "sticky-action" : "mt-4"}>
           {requestable ? (
             <Link
               className="request-asset-button"
@@ -312,14 +448,16 @@ export function AssetDetailScreen({ assetId }: { assetId: string }) {
               Request this asset <span aria-hidden="true">→</span>
             </Link>
           ) : (
-            <div className="not-requestable">
+            <div className="border-border bg-surface grid gap-2 rounded-xl border p-4">
               <strong>Not requestable right now</strong>
               <span>
                 {asset.availability === "maintenance"
                   ? "Maintenance needs to be resolved first."
                   : completedWithoutReceipt
                     ? "A completed request has no confirmed physical return receipt."
-                    : "This asset is currently unavailable."}
+                    : asset.importInfo
+                      ? "Confirm the asset data and physical condition before borrowing."
+                      : "This asset is currently unavailable."}
               </span>
             </div>
           )}

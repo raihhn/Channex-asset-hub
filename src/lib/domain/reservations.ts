@@ -4,6 +4,7 @@ import type {
   PrototypeRequest,
   ReturnReceipt,
   RequestStatus,
+  OutboundDispatch,
 } from "@/types/prototype";
 
 export type OperationalWindow = {
@@ -29,6 +30,8 @@ export type Reservation = OperationalWindow & {
   blocksAvailability: boolean;
   /** Derived only from an authoritative Return receipt; never from Request status. */
   actualInboundAt?: string;
+  actualOutboundAt?: string;
+  destinationReceivedAt?: string;
 };
 
 /** Prototype activation point: submission / Pending approval, not final policy. */
@@ -138,6 +141,7 @@ export function deriveReservations(
   assets: Asset[],
   events: ActivationEvent[],
   receipts: ReturnReceipt[] = [],
+  outboundDispatches: OutboundDispatch[] = [],
 ): Reservation[] {
   return requests.flatMap((request) => {
     const window = getOperationalWindow(request);
@@ -157,6 +161,18 @@ export function deriveReservations(
           candidate.assetId === item.assetId &&
           candidate.receivedAt,
       );
+      const dispatch = outboundDispatches.find(
+        (record) =>
+          record.requestId === request.id &&
+          record.items.some(
+            (entry) =>
+              entry.requestItemId === item.id && entry.assetId === item.assetId,
+          ),
+      );
+      const dispatchedItem = dispatch?.items.find(
+        (entry) =>
+          entry.requestItemId === item.id && entry.assetId === item.assetId,
+      );
       return [
         {
           id: item.id,
@@ -174,6 +190,10 @@ export function deriveReservations(
           usageEndAt: `${request.endDate}T23:59`,
           requestStatus: request.status,
           blocksAvailability: blocksAssetAvailability(request.status),
+          ...(dispatch ? { actualOutboundAt: dispatch.dispatchedAt } : {}),
+          ...(dispatchedItem?.receivedAt
+            ? { destinationReceivedAt: dispatchedItem.receivedAt }
+            : {}),
           ...(receipt?.receivedAt
             ? { actualInboundAt: receipt.receivedAt }
             : {}),
@@ -213,6 +233,8 @@ export function getReservationPhaseState(
   now: string,
 ) {
   if (phase === "Outbound") {
+    if (reservation.destinationReceivedAt) return "Received at destination";
+    if (reservation.actualOutboundAt) return "Dispatched · receipt pending";
     if (now.slice(0, 10) > reservation.outboundAt.slice(0, 10))
       return "Awaiting confirmation";
     return now.slice(0, 10) === reservation.outboundAt.slice(0, 10)
@@ -220,6 +242,8 @@ export function getReservationPhaseState(
       : "Upcoming";
   }
   if (phase === "Event usage") {
+    if (reservation.actualInboundAt) return "Usage ended";
+    if (reservation.destinationReceivedAt) return "In use";
     return now >= reservation.usageStartAt && now <= reservation.usageEndAt
       ? "Planned usage window"
       : "Scheduled for use";

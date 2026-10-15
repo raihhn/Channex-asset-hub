@@ -1,0 +1,662 @@
+[
+  {
+    "vendor": "Ofsorts",
+    "legalName": "Orang Seni Sejahtera",
+    "warehouse": "Jakarta",
+    "address": "Jl. Kapuk Kamal Raya no 57\n(Seberang Damkar Kapuk Kayu, sebelum Pertamina Mini)",
+    "picName": "Laura",
+    "phone": "0817-4922-610",
+    "emails": [
+      "laura@ofsorts.co"
+    ]
+  },
+  {
+    "vendor": "Ofsorts",
+    "legalName": "Orang Seni Sejahtera",
+    "warehouse": "Jatim",
+    "address": "Jl. Pandegiling no 240, Tegalsari, Dr Soetomo, Surabaya",
+    "picName": "Laura",
+    "phone": "0817-4922-610",
+    "emails": [
+      "laura@ofsorts.co"
+    ]
+  },
+  {
+    "vendor": "Dua Garis Imagi",
+    "legalName": "",
+    "warehouse": "Jabar",
+    "address": "Jl. Raya Karangsuwung, Sigong, Kec. Lemahabang, Kabupaten Cirebon, Jawa Barat 45182",
+    "picName": "Irva",
+    "phone": "0821-3487-6771",
+    "emails": [
+      "duagarisimagi@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Dua Garis Imagi",
+    "legalName": "",
+    "warehouse": "Jogja",
+    "address": "Jl. Jambon Trihanggo, RT.1/RW.28, Bedog, Trihanggo, Kec. Gamping, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55291",
+    "picName": "Irva",
+    "phone": "0821-3487-6771",
+    "emails": [
+      "duagarisimagi@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Dua Garis Imagi",
+    "legalName": "",
+    "warehouse": "Semarang",
+    "address": "Srinindito timur VI rt 3 rw 3 no 2A ngemplak simongan Semarang Barat",
+    "picName": "Irva",
+    "phone": "0821-3487-6771",
+    "emails": [
+      "duagarisimagi@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Dua Garis Imagi",
+    "legalName": "",
+    "warehouse": "Jatim",
+    "address": "Dusun Kebo Ireng RT 02 / RW 09 (gang masjid) Kelurahan Ngerong, Kec. Gempol, Kab. Pasuruan, Jawa Timur",
+    "picName": "Irva",
+    "phone": "0821-3487-6771",
+    "emails": [
+      "duagarisimagi@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Dua Garis Imagi",
+    "legalName": "",
+    "warehouse": "Lampung",
+    "address": "Jl. Ir. Sutami, Sidorejo, Kec. Sekampung Udik, Kabupaten Lampung Timur, Lampung 34385",
+    "picName": "Irva",
+    "phone": "0821-3487-6771",
+    "emails": [
+      "duagarisimagi@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Garis Tata Interior",
+    "legalName": "",
+    "warehouse": "Ciputat",
+    "address": "Jl. Musyawarah Dalam III No.193 d, Sawah Lama, Kec. Ciputat, Kota Tangerang Selatan, Banten 15415",
+    "picName": "Gatot",
+    "phone": "+62 812-9278-8187",
+    "emails": [
+      "gatotinterior17@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Trijaya Karya Santosa",
+    "legalName": "",
+    "warehouse": "Bekasi",
+    "address": "Jln. Swakarsa 1 No. 50, RT.003/RW.004, Jatibening Baru, Kec. Pondok Gede, Kota Bekasi",
+    "picName": "Retno",
+    "phone": "0813-1416-5886",
+    "emails": [
+      "trijaya_reklame@yahoo.co.id"
+    ]
+  },
+  {
+    "vendor": "Karya Satria",
+    "legalName": "",
+    "warehouse": "Jakarta",
+    "address": "Jl. Cipete Raya, RT.001/RW.008, Mustikasari, Kec. Mustika Jaya, Kota Bks, Jawa Barat 17157",
+    "picName": "Anggi",
+    "phone": "+62 858-6895-7192",
+    "emails": [
+      "ho@karyasatria.com"
+    ]
+  },
+  {
+    "vendor": "Karya Satria",
+    "legalName": "",
+    "warehouse": "Samarinda",
+    "address": "Jl. Monas Blk. F, Loa Bakung, Kec. Sungai Kunjang, Kota Samarinda, Kalimantan Timur 75126",
+    "picName": "Anggi",
+    "phone": "+62 858-6895-7192",
+    "emails": [
+      "ho@karyasatria.com"
+    ]
+  },
+  {
+    "vendor": "Karya Satria",
+    "legalName": "",
+    "warehouse": "Banjarmasin",
+    "address": "Jl. Guntung Paring, RT.18/RW.3, Guntungmanggis, Kec. Landasan Ulin, Kota Banjar Baru, Kalimantan Selatan 70731",
+    "picName": "Anggi",
+    "phone": "+62 858-6895-7192",
+    "emails": [
+      "ho@karyasatria.com"
+    ]
+  },
+  {
+    "vendor": "Karya Satria",
+    "legalName": "",
+    "warehouse": "Medan",
+    "address": "Jl. Riwayat No.1, Medan, 20361",
+    "picName": "",
+    "phone": "",
+    "emails": []
+  },
+  {
+    "vendor": "Karya Satria",
+    "legalName": "",
+    "warehouse": "Bali",
+    "address": "Jalan Sedap Malam No. 106, Kesiman, Denpasar Timur, Denpasar",
+    "picName": "Anggi",
+    "phone": "+62 858-6895-7192",
+    "emails": [
+      "ho@karyasatria.com"
+    ]
+  },
+  {
+    "vendor": "Karya Satria",
+    "legalName": "",
+    "warehouse": "Lombok",
+    "address": "Jl. Raya Bengkel-Merembu, Merembu, Kec. Labuapi, Kabupaten Lombok Barat, Nusa Tenggara Bar. 83361",
+    "picName": "Anggi",
+    "phone": "+62 858-6895-7192",
+    "emails": [
+      "ho@karyasatria.com"
+    ]
+  },
+  {
+    "vendor": "Karya Satria",
+    "legalName": "",
+    "warehouse": "Makassar",
+    "address": "BTN Dwi Dharma B2/5 Jl. Dharma RT 4, Sudiang Raya, Biringkanaya.",
+    "picName": "Anggi",
+    "phone": "+62 858-6895-7192",
+    "emails": [
+      "ho@karyasatria.com"
+    ]
+  },
+  {
+    "vendor": "Karya Satria",
+    "legalName": "",
+    "warehouse": "Pontianak",
+    "address": "Jl. Tebu, Komp. Tebu Mandala no. 19. Sungai Jawi, Pontianak Barat, Kota Pontianak",
+    "picName": "Anggi",
+    "phone": "+62 858-6895-7192",
+    "emails": [
+      "ho@karyasatria.com"
+    ]
+  },
+  {
+    "vendor": "Volk",
+    "legalName": "Kinarya Artha Jaya Nusantara",
+    "warehouse": "Jakarta",
+    "address": "Jl. Cabe VI No.81B, Pd. Cabe Ilir, Kec. Pamulang, Kota Tangerang Selatan, Banten 15418",
+    "picName": "Yongki",
+    "phone": "+62 811-1111-0136",
+    "emails": [
+      "kinaryaartajayanusantara@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Volk",
+    "legalName": "Kinarya Artha Jaya Nusantara",
+    "warehouse": "Bali",
+    "address": "Gang Batas selatan No.7, Gg. Batas selatan No.7, Pemogan, Denpasar Selatan, Kota Denpasar, Bali 80114",
+    "picName": "Yongki",
+    "phone": "+62 811-1111-0136",
+    "emails": [
+      "kinaryaartajayanusantara@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Hanuman",
+    "legalName": "Imaji Nova Caraka",
+    "warehouse": "Tangerang",
+    "address": "Jalan Pembangunan 2 No.33, Batusari, Batuceper, Kota Tangerang, RT.006/RW.004, Batusari, Kec. Batuceper, JAKARTA-TANGERANG, Banten 15121",
+    "picName": "",
+    "phone": "+62 822-9960-1328",
+    "emails": [
+      "adm.hanuman@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Realindo Hersinterprop",
+    "legalName": "",
+    "warehouse": "Pasar Minggu",
+    "address": "Jl. Kebagusan 2 No.97 12520 Pasar Minggu",
+    "picName": "Mas Galih",
+    "phone": "0851-8686-1399",
+    "emails": [
+      "galih@realcomms.net"
+    ]
+  },
+  {
+    "vendor": "Vershome",
+    "legalName": "Vers Kreasi Indonesia",
+    "warehouse": "Kelapa Gading",
+    "address": "Jl. Klp. Puyuh III Blok KH No.36, RT.2/RW.19, Klp. Gading Tim., Kec. Klp. Gading, Jakarta, Daerah Khusus Ibukota Jakarta 14240",
+    "picName": "Nicole",
+    "phone": "+62 813-8898-8837",
+    "emails": [
+      "nicoleherman@vershome.com"
+    ]
+  },
+  {
+    "vendor": "MATA Pro",
+    "legalName": "Mesardi Tiar Komunika",
+    "warehouse": "Bekasi",
+    "address": "Jl. Raya Jatikramat 24-22, RT.004/RW.017, Jatikramat, Kec. Jatiasih, Kota Bks, Jawa Barat 17421",
+    "picName": "Mas Edo",
+    "phone": "0822-9955-0555",
+    "emails": [
+      "edo.matapro@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Jakarta",
+    "address": "l. Wali Istana III, RT.007/RW.004, Jatibening Baru, Kec. Pd. Gede, Kota Bks, Jawa Barat 17412",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Bandung",
+    "address": "Jl. Nata Kusumah VI Blk. H No.235, Margahayu Tengah, Kec. Margahayu, Kabupaten Bandung, Jawa Barat 40225",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Surabaya",
+    "address": "JL, KH SAMANHUDI NO 35 TULANGAN - SIDOARJO",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Jateng",
+    "address": "Jln Kyai Kelor RT 002 RW 013 Bintaro Gunung pring(bintaro kavling) Kabupaten Magelang, Muntilan, Jawa Tengah",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Medan",
+    "address": "Jl. Surya No. 67, Indra Kasih, Kec. Medan Tembung, Kota Medan, Sumatra Utara. 20221",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Makassar",
+    "address": "l. Kemauan Raya No.42 Maccini, Makassar, Maccini Parang Kec. Makassar, Kota Makassar, Sulawesi Selatan, 90231",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Palembang",
+    "address": "jl. Ki anwar mangku ir nasional rt 45/rw 16 (belakang bedeng wak  kampeng) plaju, palembang, sumatra selatan 30266",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Pekanbaru",
+    "address": "Jl Sudirman Gg Hidayah no 10 Kel Sumahilang kec pekanbaru kota peknabaru",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kitiran Mulia Sejahtera",
+    "legalName": "",
+    "warehouse": "Lampung",
+    "address": "L Desa tanjungsari RT 006 RW 003 KEC Natar Kab lampung selatan",
+    "picName": "Novendra",
+    "phone": "0813-1109-5252",
+    "emails": [
+      "vendra.setyawan@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Pentaprima",
+    "legalName": "",
+    "warehouse": "Jakarta",
+    "address": "Jl. Kemang Sari II No.18, RT.01/RW.011, Jatibening Baru, Kec. Pd. Gede, Kota Bks, Jawa Barat",
+    "picName": "Pak Rulin",
+    "phone": "62 821-2058-435",
+    "emails": [
+      "rulin@pentaprima-adv.com"
+    ]
+  },
+  {
+    "vendor": "Pentaprima",
+    "legalName": "",
+    "warehouse": "Bandung",
+    "address": "Komplex Nata Endah, Blok H No. 235 A, Bandung, Jawa Barat",
+    "picName": "Pak Rulin",
+    "phone": "62 821-2058-435",
+    "emails": [
+      "rulin@pentaprima-adv.com"
+    ]
+  },
+  {
+    "vendor": "Pentaprima",
+    "legalName": "",
+    "warehouse": "Jateng",
+    "address": "Kenatan Blok Dalitan RT.02/12\nPucungrejo Muntilan, Kab. Magelang, Jawa Tengah",
+    "picName": "Pak Rulin",
+    "phone": "62 821-2058-435",
+    "emails": [
+      "rulin@pentaprima-adv.com"
+    ]
+  },
+  {
+    "vendor": "Pentaprima",
+    "legalName": "",
+    "warehouse": "Surabaya",
+    "address": "Jl. Ambrali No.43, Bangkil, Kragan, Kec. Gedangan, Kabupaten Sidoarjo, Jawa Timur 61254",
+    "picName": "Pak Rulin",
+    "phone": "62 821-2058-435",
+    "emails": [
+      "rulin@pentaprima-adv.com"
+    ]
+  },
+  {
+    "vendor": "Arya Advertising",
+    "legalName": "",
+    "warehouse": "Medan",
+    "address": "Jalan Bajak 2 Blok.H No.114 F, Harjo Sari 2, Medan Amplas, Harjosari II, Kec. Medan Amplas, Kota Medan, Sumatera Utara 20147",
+    "picName": "Arya",
+    "phone": "0821-6076-2279",
+    "emails": [
+      "aryaadvertising1@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Arya Advertising",
+    "legalName": "",
+    "warehouse": "Pekanbaru",
+    "address": "Jl. R. Muchran No. 9, Parit Indah (depan STIKES Al-Insyirah), Kec. Bukit Raya, Kel. Tangkerang Labuai, RT 002, RW 009, Kota Pekanbaru - Riau\nMas Arya : 0821-6076-2279",
+    "picName": "Arya",
+    "phone": "0821-6076-2279",
+    "emails": [
+      "aryaadvertising1@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Kade Desain Senter",
+    "legalName": "",
+    "warehouse": "Padang",
+    "address": "Jl. Linggarjati 1 no. 2 Tabing Padang",
+    "picName": "Fadli",
+    "phone": "62 812-6700-673",
+    "emails": [
+      "kadeadv.gondari@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Studio Kreasindo",
+    "legalName": "",
+    "warehouse": "Palembang",
+    "address": "Jl. Mayor salim Batubara, No. 2401, RT. 031, RW. 008, 20 Ilir 1, ilir timur 1 palembang . 30126",
+    "picName": "Yoga",
+    "phone": "62 813-6719-3558",
+    "emails": [
+      "sales@studiokreasindo.co.id"
+    ]
+  },
+  {
+    "vendor": "MD Production",
+    "legalName": "",
+    "warehouse": "Banjarmasin",
+    "address": "Komp, Jl.Sungai Andai Blk. B No.35, Sungai Jingah, Kec. Banjarmasin Utara, Kota Banjarmasin, Kalimantan Selatan 70122, Indonesia",
+    "picName": "Hanif",
+    "phone": "+62 878-5811-3347",
+    "emails": [
+      "hanifmurtadha75@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Amartha Bali",
+    "legalName": "Ni Kadek Puspitawati",
+    "warehouse": "Bali",
+    "address": "BR.PENARUKAN TENGAH KAJA, DESA PENARUKAN KEC KERAMBITAN TABANAN BALI",
+    "picName": "Bunga",
+    "phone": "+62 857-3116-5739",
+    "emails": [
+      "bunga05.project@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Seni Optima Pratama",
+    "legalName": "",
+    "warehouse": "Surabaya",
+    "address": "JL. SEMOLOWARU NO. 193 60119 KOTA SURABAYA",
+    "picName": "Ko Eric",
+    "phone": "+62 812-3275-5377",
+    "emails": [
+      "eric.senotama@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Bidik Inovasi Global",
+    "legalName": "",
+    "warehouse": "Surabaya",
+    "address": "JAPFA INDOLAND CENTER JAPFA TOWER II LAN TAI 12 JL.PANGLIMA SUDIRMAN NO. 66# 68 60271 KOTA SURABAYA",
+    "picName": "Rio",
+    "phone": "+62 895-3252-81040",
+    "emails": [
+      "rioafandigeogiven@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Idea Project",
+    "legalName": "",
+    "warehouse": "Surabaya",
+    "address": "Perumahan taman Surya kencana, Jl. Utama Cluster Jupiter, Grogol, Kec. Tulangan, Kabupaten Sidoarjo, Jawa Timur 61273",
+    "picName": "Syarif",
+    "phone": "+62 856-7796-888",
+    "emails": [
+      "syarif.project@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Idea Project",
+    "legalName": "",
+    "warehouse": "Jakarta",
+    "address": "Gg. H Mawardi, RT.003/RW.006, Batujaya, Kec. Batuceper, Kota Tangerang, Banten 15121",
+    "picName": "Syarif",
+    "phone": "+62 856-7796-888",
+    "emails": [
+      "syarif.project@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Adi Cipta Makmur",
+    "legalName": "",
+    "warehouse": "Bekasi",
+    "address": "Jl. Lapangan Bola Gg. Haji Kramat No.168, RT.002/RW.003, Sumur Batu, Kec. Bantar Gebang, Kota Bks, Jawa Barat 17154",
+    "picName": "Calvin",
+    "phone": "+62 812-9674-3045",
+    "emails": [
+      "ptadiciptamakmur@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Maggiollini Indonesia",
+    "legalName": "",
+    "warehouse": "Bekasi",
+    "address": "Jl. Macem, Padurenan, Mustika Jaya, Bekasi Timur, RT.002/RW.004, Padurenan, Kec. Mustika Jaya, Kota Bks, Jawa Barat 17156",
+    "picName": "Usep Munandar",
+    "phone": "+62 812-9570-7383",
+    "emails": [
+      "munandar@maggiollini.com"
+    ]
+  },
+  {
+    "vendor": "AMS",
+    "legalName": "Alfatih Mandiri Sejahtera",
+    "warehouse": "Makassar",
+    "address": "Jl. Abdullah Daeng Sirua No.248 Makassar - Sulawesi Selatan - 90234",
+    "picName": "Iman",
+    "phone": "62 821-8771-1537",
+    "emails": [
+      "cv.alfatihmandirisejahtera@yahoo.com"
+    ]
+  },
+  {
+    "vendor": "Siesta Mitra Prima",
+    "legalName": "",
+    "warehouse": "Ciputat",
+    "address": "Jl. Jambu No.29 15412 Ciputat Timur Banten",
+    "picName": "Maria",
+    "phone": "62 858-8293-4190",
+    "emails": [
+      "admin@siestaprisma.com"
+    ]
+  },
+  {
+    "vendor": "Alur Cerita Kreasindo",
+    "legalName": "",
+    "warehouse": "Depok",
+    "address": "Jl parakan no 115. Rt 02 rw 04. Kelurahan cinangka, kecamatan sawangan. Depok 16516",
+    "picName": "fadli",
+    "phone": "62 817-4816-277",
+    "emails": [
+      "fadli.alurra.id@gmail.com"
+    ]
+  },
+  {
+    "vendor": "CKM",
+    "legalName": "Cipta Kusuma Mulia",
+    "warehouse": "Bekasi",
+    "address": "PERUM GRAHA PERSADA RESIDANCE#BLOK A 17/ 32, KEL.SUKARAGAM, KEC. SERANG BARU, KA B. BEKASI, PROV. JAWA BARAT 17330 KAB. BEKASI",
+    "picName": "Eko",
+    "phone": "+62 813-8300-8248",
+    "emails": [
+      "muliaciptakusuma@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Gerai Cipta Amarta",
+    "legalName": "",
+    "warehouse": "Bandung",
+    "address": "JL. PASIRLUYU TIMUR NO. 117 BANDUNG 40254 KOTA BANDUNG",
+    "picName": "Nanang",
+    "phone": "62 822-2010-2818",
+    "emails": [
+      "Order@geraicipta.com"
+    ]
+  },
+  {
+    "vendor": "Koya Advertising",
+    "legalName": "",
+    "warehouse": "Makassar",
+    "address": "Jl. Rappocini Lr 8 No 03 Makassar (Cipta printing)",
+    "picName": "Nurul Fadillah",
+    "phone": "081241201717",
+    "emails": [
+      "koya.adv@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Adi Guna Media",
+    "legalName": "",
+    "warehouse": "Tangerang Selatan",
+    "address": "Jl. Pesona utama ll no. 173\nBakti jaya, kecamatan setu Kota Tangerang selatan",
+    "picName": "Zeni",
+    "phone": "+62 822-5784-4848",
+    "emails": [
+      "Adigunamediaprima@gmail.com"
+    ]
+  },
+  {
+    "vendor": "ARA Advertising",
+    "legalName": "",
+    "warehouse": "Bogor",
+    "address": "Jalan Pajajaran Indah V No 5, Rt 05/Rw 13, Baranangsiang, KOTA BOGOR, BOGOR TIMUR - KOTA, JAWA BARAT, ID, 16143, RT.05/RW.13, Baranangsiang, Kec. Bogor Tim., Kota Bogor, Jawa Barat 16770",
+    "picName": "",
+    "phone": "+62 889-8602-8145",
+    "emails": [
+      "lutvi.arapro@gmail.com"
+    ]
+  },
+  {
+    "vendor": "City Neonindo Indah Murni",
+    "legalName": "",
+    "warehouse": "Jakarta Barat",
+    "address": "Jl. Rawa Buaya No.3 5, RT.5/RW.1, Rw. Buaya, Kecamatan Cengkareng, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11740",
+    "picName": "Marcia",
+    "phone": "62 821-1386-0899",
+    "emails": [
+      "marcia@cityneonindo.com"
+    ]
+  },
+  {
+    "vendor": "YOTAKA",
+    "legalName": "",
+    "warehouse": "Pekanbaru",
+    "address": "Jln. Samsul Bahri, Air Hitam Garuda sakti KM3, Pekanbaru - Riau No.2 depan dinas pendidikan",
+    "picName": "Juan",
+    "phone": "+62 821-8019-0649",
+    "emails": [
+      "yotakaadvertising@gmail.com"
+    ]
+  },
+  {
+    "vendor": "GoodDesignWorks",
+    "legalName": "",
+    "warehouse": "",
+    "address": "",
+    "picName": "",
+    "phone": "",
+    "emails": [
+      "works.gooddesign@gmail.com",
+      "sindyeviolawork@gmail.com"
+    ]
+  },
+  {
+    "vendor": "Chapter Decor",
+    "legalName": "Cipta Karya Ruang",
+    "warehouse": "Serpong",
+    "address": "Jl. Kp. Perigi No.3A9/6, RT.45/RW.8, Lengkong Wetan, Kec. Serpong, Kota Tangerang Selatan, Banten 15310",
+    "picName": "William Santoso",
+    "phone": "0851 2329 3733",
+    "emails": [
+      "chapterdecor@gmail.com",
+      "work@chapterdecor.com"
+    ]
+  }
+]

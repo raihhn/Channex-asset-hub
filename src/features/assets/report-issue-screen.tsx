@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Card, Radio, RadioGroup, TextArea } from "@heroui/react";
 
-import { AppIcon } from "@/components/ui/app-icon";
+import { AppIcon } from "@/components/shared/app-icon";
 import { AppShell } from "@/components/shared/app-shell";
 import { HeroSelect } from "@/components/shared/hero-select";
 import { usePrototype } from "@/features/prototype/prototype-provider";

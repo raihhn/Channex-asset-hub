@@ -7,6 +7,7 @@ export function getAssetClassification(asset: Pick<Asset, "classification">): As
 export function getAssetClassificationLabel(
   asset: Pick<Asset, "classification">,
 ) {
+  if (getAssetClassification(asset) === "UNCLASSIFIED") return "Unclassified";
   return getAssetClassification(asset) === "INVENTORY"
     ? "Reusable Inventory"
     : "Asset";

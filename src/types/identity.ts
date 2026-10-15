@@ -1,4 +1,11 @@
-export const userRoles = ["REQUESTER", "STORE_DEV", "BRAND", "VENDOR", "SUPER_ADMIN", "MANAGEMENT"] as const;
+export const userRoles = [
+  "REQUESTER",
+  "STORE_DEV",
+  "BRAND",
+  "VENDOR",
+  "SUPER_ADMIN",
+  "MANAGEMENT",
+] as const;
 export type UserRole = (typeof userRoles)[number];
 export type UserStatus = "ACTIVE" | "INACTIVE";
 
@@ -20,20 +27,75 @@ export type Person = {
 
 export type PersonDraft = Omit<Person, "id" | "createdAt" | "updatedAt">;
 
-/** A submitted prototype handover plan, not a confirmed physical movement. */
+/** A transfer plan with optional explicit execution evidence; planning alone never moves an Asset. */
 export type TransferPlan = {
   id: string;
   assetId: string;
   destinationId: string;
+  destinationSnapshot?: import("@/lib/fixtures/registered-locations").RegisteredLocation;
   responsibleParty: string;
   condition: "Good" | "Fair" | "Needs review";
   evidenceViews: string[];
   notes: string;
   submittedAt: string;
+  purpose?: string;
+  sourceLocation?: string;
+  sourceCustodian?: string;
+  dispatchedAt?: string;
+  dispatchedByUserId?: string;
+  senderPic?: string;
+  availabilityBefore?: import("./prototype").AssetAvailability;
+  receivedAt?: string;
+  receivedByUserId?: string;
+  receiverPic?: string;
+  conditionAtReceipt?: "Good" | "Fair" | "Needs review";
 };
 
-export type AuditEntityType = "USER" | "ASSET" | "REQUEST" | "REQUEST_ITEM" | "EVENT" | "TRANSFER" | "RETURN" | "INSPECTION" | "ISSUE" | "MAINTENANCE" | "FINANCIAL_REFERENCE";
-export type AuditAction = "CREATE" | "UPDATE" | "ACTIVATE" | "INACTIVATE" | "STATUS_CHANGE" | "REQUEST_SUBMITTED" | "REVIEWER_ASSIGNED" | "REVIEWER_REASSIGNED" | "REVIEW_APPROVED" | "REVIEW_REJECTED" | "REVIEW_NEEDS_UPDATE" | "REQUEST_RESUBMITTED" | "RETURN_STARTED" | "RETURN_RECEIVED" | "INSPECTION_COMPLETED" | "ISSUE_CREATED" | "PHOTO_ADDED" | "TRANSFER_PLANNED" | "MAINTENANCE_CREATED" | "VENDOR_ASSIGNED" | "WORK_STARTED" | "WORK_COMPLETED" | "MAINTENANCE_ACCEPTED" | "MAINTENANCE_REWORK" | "MAINTENANCE_CANCELLED" | "FINANCIAL_REFERENCE_ADDED" | "FINANCIAL_REFERENCE_UPDATED" | "FINANCIAL_REFERENCE_REMOVED";
+export type AuditEntityType =
+  | "USER"
+  | "ASSET"
+  | "REQUEST"
+  | "REQUEST_ITEM"
+  | "EVENT"
+  | "TRANSFER"
+  | "RETURN"
+  | "INSPECTION"
+  | "ISSUE"
+  | "MAINTENANCE"
+  | "FINANCIAL_REFERENCE";
+export type AuditAction =
+  | "CREATE"
+  | "UPDATE"
+  | "ACTIVATE"
+  | "INACTIVATE"
+  | "STATUS_CHANGE"
+  | "REQUEST_SUBMITTED"
+  | "REVIEWER_ASSIGNED"
+  | "REVIEWER_REASSIGNED"
+  | "REVIEW_APPROVED"
+  | "REVIEW_REJECTED"
+  | "REVIEW_NEEDS_UPDATE"
+  | "REQUEST_RESUBMITTED"
+  | "RETURN_STARTED"
+  | "RETURN_RECEIVED"
+  | "INSPECTION_COMPLETED"
+  | "ISSUE_CREATED"
+  | "PHOTO_ADDED"
+  | "OUTBOUND_DISPATCHED"
+  | "OUTBOUND_RECEIVED"
+  | "TRANSFER_PLANNED"
+  | "TRANSFER_DISPATCHED"
+  | "TRANSFER_RECEIVED"
+  | "MAINTENANCE_CREATED"
+  | "VENDOR_ASSIGNED"
+  | "WORK_STARTED"
+  | "WORK_COMPLETED"
+  | "MAINTENANCE_ACCEPTED"
+  | "MAINTENANCE_REWORK"
+  | "MAINTENANCE_CANCELLED"
+  | "FINANCIAL_REFERENCE_ADDED"
+  | "FINANCIAL_REFERENCE_UPDATED"
+  | "FINANCIAL_REFERENCE_REMOVED";
 
 export type AuditChange = { field: string; before: string; after: string };
 
@@ -48,5 +110,11 @@ export type AuditEvent = Readonly<{
   entityId: string;
   summary: string;
   changes?: readonly AuditChange[];
-  related?: Readonly<{ requestId?: string; requestItemId?: string; assetId?: string; maintenanceId?: string; approvalAssignmentId?: string }>;
+  related?: Readonly<{
+    requestId?: string;
+    requestItemId?: string;
+    assetId?: string;
+    maintenanceId?: string;
+    approvalAssignmentId?: string;
+  }>;
 }>;

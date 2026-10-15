@@ -1,0 +1,95 @@
+[
+  {
+    "id": "70000000-0000-4000-8000-000000000001",
+    "name": "Ofsorts",
+    "legalName": "Orang Seni Sejahtera",
+    "contacts": [
+      {
+        "id": "70000000-0000-4000-8000-000000000011",
+        "name": "Laura",
+        "phone": "0817-4922-610",
+        "email": "laura@ofsorts.co"
+      }
+    ],
+    "warehouses": [
+      {
+        "id": "70000000-0000-4000-8000-000000000101",
+        "name": "Jakarta",
+        "address": "DUMMY — alamat warehouse Jakarta belum dikonfirmasi",
+        "addressVerified": false,
+        "contactIds": [
+          "70000000-0000-4000-8000-000000000011"
+        ]
+      },
+      {
+        "id": "70000000-0000-4000-8000-000000000102",
+        "name": "Jatim",
+        "address": "Jl. Pandegiling no 240, Tegalsari, Dr Soetomo, Surabaya",
+        "addressVerified": true,
+        "contactIds": [
+          "70000000-0000-4000-8000-000000000011"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "70000000-0000-4000-8000-000000000002",
+    "name": "Dua Garis Imagi",
+    "legalName": "",
+    "contacts": [
+      {
+        "id": "70000000-0000-4000-8000-000000000012",
+        "name": "Irva",
+        "phone": "0821-3487-6771",
+        "email": "duagarisimagi@gmail.com"
+      }
+    ],
+    "warehouses": [
+      {
+        "id": "70000000-0000-4000-8000-000000000201",
+        "name": "Jabar",
+        "address": "Jl. Raya Karangsuwung, Sigong, Kec. Lemahabang, Kabupaten Cirebon, Jawa Barat 45182",
+        "addressVerified": true,
+        "contactIds": [
+          "70000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "id": "70000000-0000-4000-8000-000000000202",
+        "name": "Jogja",
+        "address": "Jl. Jambon Trihanggo, RT.1/RW.28, Bedog, Trihanggo, Kec. Gamping, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55291",
+        "addressVerified": true,
+        "contactIds": [
+          "70000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "id": "70000000-0000-4000-8000-000000000203",
+        "name": "Semarang",
+        "address": "Srinindito timur VI rt 3 rw 3 no 2A ngemplak simongan Semarang Barat",
+        "addressVerified": true,
+        "contactIds": [
+          "70000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "id": "70000000-0000-4000-8000-000000000204",
+        "name": "Jatim",
+        "address": "DUMMY — alamat warehouse Jatim belum dikonfirmasi",
+        "addressVerified": false,
+        "contactIds": [
+          "70000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "id": "70000000-0000-4000-8000-000000000205",
+        "name": "Lampung",
+        "address": "Jl. Ir. Sutami, Sidorejo, Kec. Sekampung Udik, Kabupaten Lampung Timur, Lampung 34385",
+        "addressVerified": true,
+        "contactIds": [
+          "70000000-0000-4000-8000-000000000012"
+        ]
+      }
+    ]
+  }
+]

@@ -1,4 +1,5 @@
 "use client";
+import {validateUnitPolicy} from "@/lib/domain/asset-units";
 
 import {
   createContext,
@@ -7,6 +8,7 @@ import {
   useMemo,
   useEffect,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 
@@ -16,6 +18,10 @@ import {
   prototypeReturnReceipts,
   prototypeWbsReferences,
 } from "@/lib/fixtures/prototype-data";
+import { dispatchOutbound, receiveOutbound, applyOutboundReceipt } from "@/lib/domain/outbound";
+import { dispatchTransfer, receiveTransfer, applyTransferReceipt } from "@/lib/domain/transfers";
+import { deriveReturnTasks } from "@/lib/domain/request-journey";
+import { localDateTimeKey, getOperationalWindow } from "@/lib/domain/reservations";
 import { uniqueWbsCodes } from "@/lib/domain/wbs-references";
 import { normalizeGroupItemIds, preserveRequestItemIds } from "@/lib/domain/request-item-identity";
 import { durableBookingEnabled, fetchDurableBookings, saveDurableBooking, saveDurableReview } from "@/lib/booking-client";
@@ -26,7 +32,9 @@ import { defaultCurrentUserId, peopleFixtures } from "@/lib/fixtures/people";
 import { createAuditEvent, appendAuditEvent } from "@/lib/domain/audit";
 import { activeReviewAssignment, appendReviewHistory, reviewCycle, reviewHistoryEntry, validateReviewDecision, validateReviewerAssignment } from "@/lib/domain/approvals";
 import { personChanges, validatePersonDraft } from "@/lib/domain/people";
-import { getRegisteredLocation } from "@/lib/fixtures/registered-locations";
+import { useVendorLocations } from "@/components/shared/use-vendor-locations";
+import { validateVendorLocation } from "@/lib/vendor-locations-client";
+import { registeredLocations as legacyLocations, getRegisteredLocation } from "@/lib/fixtures/registered-locations";
 import {
   applyInspectionToAsset,
   applyReceiptToAsset,
@@ -57,10 +65,12 @@ import type {
   PrototypeRequest,
   PrototypeRole,
   RequestDraft,
+  RequestDocument,
   WbsReference,
   ActivationEvent,
   EventDraft,
   ReturnReceipt,
+  OutboundDispatch,
   MaintenanceRecord,
   ApprovalAssignment,
   ApprovalDecision,
@@ -69,6 +79,9 @@ import type {
 import type { AuditAction, AuditChange, AuditEntityType, AuditEvent, Person, PersonDraft, TransferPlan } from "@/types/identity";
 
 type PrototypeContextValue = {
+  operationalLocations: import("@/lib/fixtures/registered-locations").RegisteredLocation[];
+  vendorLoading:boolean;
+  vendorError:string;
   people: Person[];
   currentUser: Person;
   setCurrentUserId: (id: string) => void;
@@ -82,11 +95,20 @@ type PrototypeContextValue = {
   createPerson: (draft: PersonDraft) => Person;
   updatePerson: (id: string, draft: PersonDraft) => void;
   setPersonStatus: (id: string, status: Person["status"]) => void;
-  planTransfer: (input: { assetId: string; destinationId: string; responsibleParty: string; condition: Asset["condition"]; evidence: string[]; notes: string }) => TransferPlan;
+  planTransfer: (input: { assetId: string; destinationId: string; responsibleParty: string; condition: Asset["condition"]; evidence: string[]; notes: string; purpose?: string }) => Promise<TransferPlan>;
+  dispatchTransferPlan: (id: string, senderPic: string) => Promise<void>;
+  receiveTransferPlan: (id: string, receiverPic: string, condition: Asset["condition"]) => void;
   requests: PrototypeRequest[];
   assets: Asset[];
+  catalogAssets: Asset[];
+  assetLoading: boolean;
+  assetError: string;
+  registerAsset: (asset: Asset) => void;
   wbsReferences: WbsReference[];
   events: ActivationEvent[];
+  outboundDispatches: OutboundDispatch[];
+  dispatchRequestAssets: (requestId: string, input: { groupId: string; itemIds: string[]; senderPic: string; loadingInLetters: RequestDocument[] }) => void;
+  receiveRequestAssets: (requestId: string, dispatchId: string, input: { itemIds: string[]; receiverPic: string; condition: Asset["condition"] }) => void;
   returnReceipts: ReturnReceipt[];
   maintenanceRecords: MaintenanceRecord[];
   createMaintenance: (assetId: string, origin: MaintenanceOrigin) => MaintenanceRecord;
@@ -98,7 +120,7 @@ type PrototypeContextValue = {
   holdMaintenance: (maintenanceId: string, reason: string) => void;
   resumeMaintenance: (maintenanceId: string) => void;
   cancelMaintenance: (maintenanceId: string, reason: string) => void;
-  startReturn: (requestId: string, requestItemId: string) => void;
+  startReturn: (requestId: string, requestItemId: string, loadingOutLetters?: RequestDocument[]) => void;
   confirmReceived: (
     requestId: string,
     requestItemId: string,
@@ -150,6 +172,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       });
     }, prototypeAssets),
   );
+  const [outboundDispatches, setOutboundDispatches] = useState<OutboundDispatch[]>([]);
   const [returnReceipts, setReturnReceipts] = useState(prototypeReturnReceipts);
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [wbsReferences, setWbsReferences] = useState(prototypeWbsReferences);
@@ -161,7 +184,33 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
   const [approvalAssignments, setApprovalAssignments] = useState<ApprovalAssignment[]>([]);
   const [financialReferences, setFinancialReferences] = useState<FinancialReference[]>([]);
   const [transferPlans, setTransferPlans] = useState<TransferPlan[]>([]);
+  const transferCommands=useRef(new Set<string>());
   const currentUser = people.find((person) => person.id === currentUserId) ?? people[0];
+
+  const [assetLoading, setAssetLoading] = useState(true);
+  const [assetError, setAssetError] = useState("");
+  const [internalWarehouses, setInternalWarehouses] = useState<typeof legacyLocations>([]);
+  const [hasImportedCatalog, setHasImportedCatalog] = useState(false);
+  const catalogAssets = useMemo(() => assetLoading || assetError ? [] : hasImportedCatalog ? assets.filter(asset => asset.importInfo || !prototypeAssets.some(fixture => fixture.id === asset.id)) : assets, [assets, assetLoading, assetError, hasImportedCatalog]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/assets", {headers:{"x-prototype-actor-id":currentUser.id}, cache:"no-store"}).then(async response => {
+      if (!response.ok) throw new Error("Could not load the asset database.");
+      const {assets: loaded, internalWarehouses: warehouses} = await response.json() as {assets: Asset[]; internalWarehouses: typeof legacyLocations};
+      if (!active) return;
+      setAssets(current => [...loaded.map(asset => {
+        const existing = current.find(item => item.id === asset.id);
+        return existing ? {...existing, photos:asset.photos} : asset;
+      }), ...current.filter(asset => !loaded.some(item => item.id === asset.id))]);
+      setInternalWarehouses(warehouses);
+      setHasImportedCatalog(loaded.length > 0);
+      setAssetError("");
+    }).catch((error:unknown) => { if(active) setAssetError(error instanceof Error ? error.message : "Could not load assets."); }).finally(() => {if(active) setAssetLoading(false);});
+    return () => {active=false;};
+  }, [currentUser.id]);
+
+  const {vendorLocations,vendorLoading,vendorError}=useVendorLocations(currentUser.id);
+  const operationalLocations=useMemo(()=>[...legacyLocations.filter((location)=>!location.vendorId && (!hasImportedCatalog || location.type!=="Internal warehouse")),...internalWarehouses,...vendorLocations],[vendorLocations, internalWarehouses, hasImportedCatalog]);
 
   useEffect(() => {
     if (!durableBookingEnabled) return;
@@ -187,6 +236,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<PrototypeContextValue>(
     () => ({
+      operationalLocations,vendorLoading,vendorError,
       people,
       currentUser,
       setCurrentUserId: (id) => {
@@ -249,17 +299,89 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
         setPeople((current) => current.map((person) => person.id === id ? { ...person, status, updatedAt: new Date().toISOString() } : person));
         audit(status === "ACTIVE" ? "ACTIVATE" : "INACTIVATE", "USER", id, `${status === "ACTIVE" ? "Activated" : "Inactivated"} ${previous.name}`, [{ field: "status", before: previous.status, after: status }]);
       },
-      planTransfer: (input) => {
+      outboundDispatches,
+      dispatchRequestAssets: (requestId, input) => {
+        const request = requests.find((request) => request.id === requestId);
+        if (!request) throw new Error("Request not found.");
+        const record = dispatchOutbound(outboundDispatches, request, assets, returnReceipts, currentUser, { ...input, id: `outbound-${crypto.randomUUID()}`, at: new Date().toISOString() });
+        setOutboundDispatches((current) => [...current, record]);
+        setAssets((current) => current.map((asset) => record.items.some((item) => item.assetId === asset.id) ? {
+          ...asset, availability: "unavailable", history: [{ date: record.dispatchedAt, title: "Dispatched to usage destination", detail: `${requestId} · ${record.destination} · sending PIC ${record.senderPic}`, kind: "Movement" }, ...asset.history],
+        } : asset));
+        setRequests((current) => current.map((request) => request.id === requestId ? { ...request,
+          items: request.items.map((item) => input.itemIds.includes(item.id) ? { ...item, fulfillmentState: "In transit" } : item),
+          activity: [{ date: record.dispatchedAt, title: "Outbound dispatched", detail: `${record.items.length} asset(s) → ${record.destination}` }, ...(request.activity ?? [])],
+        } : request));
+        audit("OUTBOUND_DISPATCHED", "REQUEST", requestId, `Confirmed dispatch of ${record.items.length} asset(s); sending PIC ${record.senderPic}`, [{ field: "outboundDispatch", before: "Planned", after: record.id }], { requestId });
+      },
+      receiveRequestAssets: (requestId, dispatchId, input) => {
+        const record = outboundDispatches.find((record) => record.id === dispatchId && record.requestId === requestId);
+        const request = requests.find((request) => request.id === requestId);
+        if (!record || !request) throw new Error("Outbound dispatch not found.");
+        if (input.itemIds.some((id) => !request.items.some((item) => item.id === id && record.items.some((entry) => entry.requestItemId === id && entry.assetId === item.assetId)))) throw new Error("Dispatch item does not match this request.");
+        if (input.itemIds.some((id) => returnReceipts.some((receipt) => receipt.requestItemId === id))) throw new Error("A return already exists for this item.");
+        const next = receiveOutbound(record, currentUser, { ...input, at: new Date().toISOString() });
+        setOutboundDispatches((current) => current.map((record) => record.id === dispatchId ? next : record));
+        setAssets((current) => current.map((asset) => {
+          const item = next.items.find((item) => item.assetId === asset.id && input.itemIds.includes(item.requestItemId));
+          return item ? applyOutboundReceipt(asset, next, item.requestItemId) : asset;
+        }));
+        setRequests((current) => current.map((request) => request.id === requestId ? { ...request,
+          status: ["Approved", "Ready", "In use"].includes(request.status) ? "In use" : request.status,
+          items: request.items.map((item) => input.itemIds.includes(item.id) ? { ...item, fulfillmentState: "In use" } : item),
+          activity: [{ date: new Date().toISOString(), title: "Received at usage destination", detail: `${input.itemIds.length} asset(s) · ${input.receiverPic.trim()}` }, ...(request.activity ?? [])],
+        } : request));
+        audit("OUTBOUND_RECEIVED", "REQUEST", requestId, `Confirmed ${input.itemIds.length} asset(s) at ${next.destination}; receiving PIC ${input.receiverPic.trim()}`, [{ field: "outboundDispatch", before: "In transit", after: next.id }], { requestId });
+      },
+      planTransfer: async (input) => {
         const asset = assets.find((item) => item.id === input.assetId);
-        const destination = getRegisteredLocation(input.destinationId);
-        if (!asset || !destination || !input.responsibleParty.trim() || input.evidence.length < 3) throw new Error("Complete Asset, destination, receiving party, and required evidence.");
-        const plan: TransferPlan = { id: `transfer-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, assetId: asset.id, destinationId: destination.id, responsibleParty: input.responsibleParty.trim(), condition: input.condition, evidenceViews: [...input.evidence], notes: input.notes.trim(), submittedAt: new Date().toISOString() };
+        let destination = operationalLocations.find((location)=>location.id===input.destinationId);
+        if(destination?.vendorId)destination=await validateVendorLocation(destination.id,currentUser.id);
+        if (!asset || !destination || destination.type === "Store" || destination.name === asset.location || !input.responsibleParty.trim() || !["Front", "Left side", "Detail"].every(view=>input.evidence.includes(view))) throw new Error("Complete Asset, a different warehouse/workshop destination, receiving party, and required views.");
+        const plan: TransferPlan = { id: `transfer-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, assetId: asset.id, destinationId: destination.id, destinationSnapshot: destination, responsibleParty: input.responsibleParty.trim(), purpose: input.purpose?.trim(), sourceLocation: asset.location, sourceCustodian: asset.currentCustodian, condition: input.condition, evidenceViews: [...input.evidence], notes: input.notes.trim(), submittedAt: new Date().toISOString() };
         setTransferPlans((current) => [plan, ...current]);
         audit("TRANSFER_PLANNED", "TRANSFER", plan.id, `Submitted ${asset.name} handover plan to ${destination.name}; receiving party ${plan.responsibleParty}`, undefined, { assetId: asset.id });
         return plan;
       },
+      dispatchTransferPlan: async (id, senderPic) => {
+        const plan=transferPlans.find(plan=>plan.id===id);
+        const asset=assets.find(asset=>asset.id===plan?.assetId);
+        if (!plan || !asset) throw new Error("Transfer not found.");
+        if(transferCommands.current.has(asset.id))throw new Error("A transfer confirmation for this asset is already running.");
+        transferCommands.current.add(asset.id);
+        try {
+        if (transferPlans.some(record=>record.id!==id && record.assetId===asset.id && record.dispatchedAt && !record.receivedAt)) throw new Error("Another transfer is still in transit.");
+        if (outboundDispatches.some(record=>record.items.some(item=>item.assetId===asset.id && !returnReceipts.some(receipt=>receipt.requestItemId===item.requestItemId && receipt.receivedAt)))) throw new Error("Complete the linked booking return before transferring this asset.");
+        const now=localDateTimeKey(new Date());
+        if (requests.some(request=>!["Draft","Rejected","Cancelled"].includes(request.status) && getOperationalWindow(request).outboundAt<=now && request.items.some(item=>item.assetId===asset.id && !returnReceipts.some(receipt=>receipt.requestItemId===item.id && receipt.receivedAt)))) throw new Error("This asset has an outstanding booking. Complete its return before transferring it.");
+        const snapshot=plan.destinationSnapshot?.vendorId ? await validateVendorLocation(plan.destinationId,currentUser.id) : plan.destinationSnapshot;
+        const next=dispatchTransfer({...plan,destinationSnapshot:snapshot},asset,currentUser,senderPic,new Date().toISOString());
+        setTransferPlans(current=>current.map(record=>record.id===id?next:record));
+        setAssets(current=>current.map(record=>record.id===asset.id?{...record,availability:"unavailable",history:[{date:next.dispatchedAt!,title:"Transfer dispatched",detail:`${next.sourceLocation} → ${next.destinationSnapshot?.name ?? getRegisteredLocation(next.destinationId)?.name} · ${next.senderPic}`,kind:"Movement"},...record.history]}:record));
+        audit("TRANSFER_DISPATCHED","TRANSFER",id,`Dispatched ${asset.name}; sending PIC ${next.senderPic}`,undefined,{assetId:asset.id});
+        } finally {transferCommands.current.delete(asset.id);}
+      },
+      receiveTransferPlan: (id, receiverPic, condition) => {
+        const plan=transferPlans.find(plan=>plan.id===id);
+        if (!plan) throw new Error("Transfer not found.");
+        const next=receiveTransfer(plan,currentUser,receiverPic,condition,new Date().toISOString());
+        const asset=assets.find(asset=>asset.id===plan.assetId);
+        if (!asset) throw new Error("Asset not found.");
+        const received=applyTransferReceipt(asset,next);
+        setTransferPlans(current=>current.map(record=>record.id===id?next:record));
+        setAssets(current=>current.map(record=>record.id===plan.assetId?received:record));
+        audit("TRANSFER_RECEIVED","TRANSFER",id,`Received ${asset.name} at ${received.location}; receiving PIC ${next.receiverPic}`,undefined,{assetId:asset.id});
+      },
       requests,
       assets,
+      catalogAssets, assetLoading, assetError,
+      registerAsset: (asset) => {
+        if (!currentUser.roles.some(role => ["SUPER_ADMIN", "STORE_DEV"].includes(role))) throw new Error("Only StoreDev or Super Admin can register assets in this prototype.");
+        validateUnitPolicy(asset.unitPolicy ?? {stockUnit: "Unit"});
+        if (!asset.name.trim() || !Number.isFinite(asset.totalQuantity) || asset.totalQuantity! <= 0) throw new Error("Enter an asset name and positive stock quantity.");
+        setAssets(current => [asset, ...current]);
+        audit("CREATE", "ASSET", asset.id, `Registered ${asset.name}`);
+      },
       wbsReferences,
       events,
       bookingLoading,
@@ -374,15 +496,20 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
         setAssets((current) => current.map((item) => item.id === record.assetId ? applyCancelledMaintenanceToAsset(item, next) : item));
         audit("MAINTENANCE_CANCELLED", "MAINTENANCE", maintenanceId, `Cancelled maintenance: ${reason.trim()}`, [{ field: "status", before: record.status, after: next.status }], { assetId: record.assetId });
       },
-      startReturn: (requestId, requestItemId) => {
+      startReturn: (requestId, requestItemId, loadingOutLetters) => {
         const request = requests.find((item) => item.id === requestId);
         if (!request) throw new Error("Request not found.");
+        const task = deriveReturnTasks(request, outboundDispatches, returnReceipts, localDateTimeKey(new Date())).find(task => task.requestItemId === requestItemId);
+        if (!task?.canStart) throw new Error("This asset has no received delivery to return yet.");
+        const dispatch = outboundDispatches.find((record) => record.items.some((item) => item.requestItemId === requestItemId));
+        if (dispatch && !dispatch.items.find((item) => item.requestItemId === requestItemId)?.receivedAt) throw new Error("Confirm receipt at the usage destination before starting its return.");
         const next = initiateReturn(
           returnReceipts,
           request,
           requestItemId,
           currentUser.name,
           new Date().toISOString(),
+          loadingOutLetters,
         );
         setReturnReceipts(next);
         setRequests((current) =>
@@ -412,7 +539,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       },
       confirmReceived: (requestId, requestItemId, input) => {
         const request = requests.find((item) => item.id === requestId);
-        const location = getRegisteredLocation(input.receivingLocationId);
+        const location = operationalLocations.find((location)=>location.id===input.receivingLocationId);
         if (!request) throw new Error("Request not found.");
         if (!location)
           throw new Error("Choose a registered receiving location.");
@@ -673,7 +800,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       role,
       setRole,
     }),
-    [approvalAssignments, assets, audit, auditEvents, bookingError, bookingLoading, currentUser, events, financialReferences, maintenanceRecords, people, requests, returnReceipts, role, transferPlans, wbsReferences],
+    [catalogAssets, assetLoading, assetError, operationalLocations,vendorLoading,vendorError,approvalAssignments, assets, audit, auditEvents, bookingError, bookingLoading, currentUser, events, financialReferences, maintenanceRecords, people, requests, returnReceipts, outboundDispatches, role, transferPlans, wbsReferences],
   );
 
   return (

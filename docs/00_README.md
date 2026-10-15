@@ -32,14 +32,20 @@ A user should be able to answer quickly:
 - Asset work: `domain/ASSET_MODEL.md` + `domain/ASSET_LIFECYCLE.md`
 - Booking work: `domain/REQUEST_BOOKING_MODEL.md` + `domain/APPROVAL_MODEL.md`
 - Operational booking windows and planning calendar: `domain/OPERATIONAL_CALENDAR_AND_RESERVATIONS.md`
+- Approved Request physical outbound: `domain/OUTBOUND_WORKFLOW.md`
+- Booking/order tracking, linked return tasks and in-app reminders: `experience/BOOKING_TRACKING.md`
+- Separate warehouse/workshop transfer execution: `domain/TRANSFER_WORKFLOW.md`
 - Physical returns and authoritative inbound: `domain/RETURN_WORKFLOW.md`
 - Physical Asset maintenance, evidence, Vendor work, and acceptance: `domain/MAINTENANCE_WORKFLOW.md`
 - Organizational People, multi-role scope, current-user identity, and prototype audit: `domain/PEOPLE_ROLES_SCOPE_AND_AUDIT.md`
 - Manual Request reviewer assignment, decisions, revision cycles, and reservation compatibility: `domain/MANUAL_REQUEST_REVIEW.md`
 - Bounded Operational History, source derivation, filters, CSV, and manual financial references: `domain/OPERATIONAL_REPORTING.md`
+- Home / Today frontend: `experience/HOME.md`
 - Mobile UI: `experience/MOBILE_EXPERIENCE.md` + `design/RESPONSIVE_RULES.md`
 - UI components: `design/DESIGN_SYSTEM.md` + `design/COMPONENT_ARCHITECTURE.md`
 - Backend, identity, and media infrastructure: `engineering/ADR_001_BACKEND_AUTH_STORAGE.md`
+- Local imported asset catalog and workbook photo evidence: `domain/ASSET_CATALOG_IMPORT.md`
+- Durable local Vendor directory, warehouses and operational PICs: `domain/VENDOR_MASTER_PERSISTENCE.md`
 - Production persistence, authority, concurrency, migration, and risk map: `architecture/PRODUCTION_READINESS.md`
 - Slice 10 local PostgreSQL booking implementation and its non-production boundaries: `architecture/PERSISTENCE_FOUNDATION.md`
 - Slice planning: `delivery/IMPLEMENTATION_PLAN.md`

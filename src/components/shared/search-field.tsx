@@ -1,5 +1,5 @@
-import { Input } from "@/components/ui/input";
-import { AppIcon } from "@/components/ui/app-icon";
+import { Input } from "@heroui/react";
+import { AppIcon } from "@/components/shared/app-icon";
 
 type SearchFieldProps = {
   value: string;

@@ -85,7 +85,7 @@ test("Custom Booth passes the existing four-step flow without a physical Asset",
   ).toBeEnabled();
   await page.getByRole("button", { name: /Choose assets/ }).click();
   await page
-    .locator(".request-inventory__filters .hero-select")
+    .locator(".hero-select")
     .filter({ hasText: "Booth requirement" })
     .locator("button")
     .click();
@@ -109,7 +109,13 @@ test("Custom Booth passes the existing four-step flow without a physical Asset",
   await expect(
     page.getByText("Custom Booth · no existing Asset required"),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Project details and documents", exact: true })
+    .click();
   await expect(page.getByText("Dian · 0812 3456 7890")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Budget and references", exact: true })
+    .click();
   await expect(page.getByText("BUD-ADHOC-001")).toBeVisible();
   await expect(page.getByText("loading-in.pdf")).toBeVisible();
   await expect(page.getByText(/6 × 4 × 3 m/)).toBeVisible();
@@ -125,7 +131,7 @@ test("booth requirement is integrated with asset filters and master Events suppo
   await page.getByLabel("Budget code (required)").fill("BUD-BOOTH-001");
   await page.getByRole("button", { name: /Choose assets/ }).click();
   await page
-    .locator(".request-inventory__filters .hero-select")
+    .locator(".hero-select")
     .filter({ hasText: "Booth requirement" })
     .locator("button")
     .click();
@@ -190,6 +196,9 @@ test("Flow A: an available physical Asset submits with separate usage and logist
     .first()
     .click();
   await expect(page).toHaveURL(/\/requests\/REQ-2026-/);
+  await page
+    .getByRole("button", { name: "Schedule and routes", exact: true })
+    .click();
   await expect(page.getByText("Operational reservation")).toBeVisible();
   await expect(page.getByText("Glow Pavilion 4×6").first()).toBeVisible();
 });
@@ -198,10 +207,11 @@ test("Flow B: a conflicting operational reservation is unavailable in Select Ass
   page,
 }) => {
   await page.goto("/request/new");
-  const eventPicker = page
-    .locator(".request-context-card__fields .hero-select")
-    .filter({ hasText: "Event / activation" });
-  await eventPicker.locator("button").click();
+  await page
+    .locator(".hero-select")
+    .filter({ hasText: "Event / activation" })
+    .locator("button")
+    .click();
   await page.getByRole("option", { name: /Gandaria City/ }).click();
   await page.getByLabel("Budget code (required)").fill("BUD-OPS-CONFLICT");
   await page.getByRole("button", { name: /Choose assets/ }).click();
@@ -220,10 +230,11 @@ test("Flow D: changing Fulfillment dates surfaces a selected conflict and blocks
   page,
 }) => {
   await page.goto("/request/new");
-  const eventPicker = page
-    .locator(".request-context-card__fields .hero-select")
-    .filter({ hasText: "Event / activation" });
-  await eventPicker.locator("button").click();
+  await page
+    .locator(".hero-select")
+    .filter({ hasText: "Event / activation" })
+    .locator("button")
+    .click();
   await page.getByRole("option", { name: /Kelapa Gading/ }).click();
   await page.getByLabel("Budget code (required)").fill("BUD-OPS-EDITED");
   await page.getByRole("button", { name: /Choose assets/ }).click();
@@ -256,4 +267,89 @@ test("Flow D: changing Fulfillment dates surfaces a selected conflict and blocks
   await expect(
     page.getByRole("button", { name: "Continue to fulfillment →" }),
   ).toBeDisabled();
+});
+
+test("registered event derives locked project metadata and defers loading-out documents", async ({
+  page,
+}) => {
+  await page.goto("/request/new");
+  await expect(page.getByLabel("Project name")).toHaveAttribute("readonly", "");
+  await expect(page.getByLabel("Full project address")).toHaveAttribute(
+    "readonly",
+    "",
+  );
+  await expect(page.getByLabel("Upload Loading-out letter")).toHaveCount(0);
+  const brand = page
+    .locator(".hero-select")
+    .filter({ hasText: "Brand" })
+    .first();
+  await brand.locator("button").click();
+  await page.getByRole("option", { name: "Kahf", exact: true }).click();
+  await expect(page.getByLabel("Full project address")).toHaveValue("");
+  const event = page
+    .locator(".hero-select")
+    .filter({ hasText: "Event / activation" });
+  await event.locator("button").click();
+  await page.getByRole("option").first().click();
+  await expect(page.getByLabel("Project name")).not.toHaveValue("");
+  await expect(page.getByLabel("Full project address")).not.toHaveValue("");
+  await page.getByRole("button", { name: "Ad-hoc Event" }).click();
+  await expect(page.getByLabel("Project name")).not.toHaveAttribute(
+    "readonly",
+    "",
+  );
+});
+
+test("vendor workshop is an Ad-hoc destination rather than a request purpose", async ({
+  page,
+}) => {
+  await page.goto("/request/new");
+  await expect(
+    page.getByRole("button", { name: "Vendor workshop", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Ad-hoc Event" }).click();
+  const locationType = page
+    .locator(".hero-select")
+    .filter({ hasText: "Location type" });
+  await locationType.locator("button").click();
+  await page
+    .getByRole("option", { name: "Outside Store", exact: true })
+    .click();
+  const destination = page
+    .locator(".hero-select")
+    .filter({ hasText: "Registered destination" });
+  await destination.locator("button").click();
+  await page.getByRole("searchbox", { name: "Search Registered destination", exact: true }).fill("ofsorts jakarta");
+  await page
+    .getByRole("option")
+    .filter({ hasText: "Ofsorts — Jakarta" })
+    .click();
+  await expect(page.getByLabel("Full project address")).toHaveValue(
+    /Kapuk Kamal/,
+  );
+  await page.getByLabel("Project name").fill("Workshop product photoshoot");
+  await page.getByLabel("Budget code (required)").fill("BUD-WORKSHOP");
+  await page.getByRole("button", { name: /Choose assets/ }).click();
+  await page
+    .locator(".hero-select")
+    .filter({ hasText: "Booth requirement" })
+    .locator("button")
+    .click();
+  await page.getByRole("option", { name: "Custom Booth", exact: true }).click();
+  await page.getByRole("button", { name: /Continue to fulfillment/ }).click();
+  await expect(page.getByText(/Kapuk Kamal/).first()).toBeVisible();
+  await page.getByRole("button", { name: /Review request/ }).click();
+  await expect(page.getByText("Ad-hoc Event", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Submit request", exact: true })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/requests\/REQ-/);
+  await expect(
+    page.getByRole("heading", {
+      name: "Workshop product photoshoot",
+      level: 1,
+      exact: true,
+    }),
+  ).toBeVisible();
 });

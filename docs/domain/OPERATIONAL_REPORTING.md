@@ -14,7 +14,7 @@ Phase 1 WBS, PR Number, PO Number, and Invoice Number are entered manually and a
 | --- | --- |
 | Request submitted/resubmitted | Request review history; legacy Request `submittedAt` only when an explicit date exists |
 | Review Approved/Rejected/Needs Update | Decided `ApprovalAssignment` with `decidedAt`; never inferred from Request status |
-| Transfer planned | `TransferPlan.submittedAt`; no physical transfer-received event exists yet |
+| Transfer planned / dispatched / received | `TransferPlan.submittedAt` / explicit `dispatchedAt` / confirmed `receivedAt`; plans alone never prove execution |
 | Return started/received | `ReturnReceipt.initiatedAt` / confirmed `receivedAt` |
 | Return inspection | `ReturnReceipt.inspectedAt` and outcome |
 | Maintenance created, Vendor assigned, work started/completed, accepted, sent back, cancelled | `MaintenanceRecord.activity` timestamps |

@@ -19,7 +19,7 @@ Current V2 docs override V1 prototype behavior when they conflict.
 Use:
 Route -> Feature -> Domain/Shared Component -> Base Primitive.
 
-The base primitive layer is the official shadcn/ui source component system. The CLI base is React Aria (`aria-maia`, preset `b1ZQ7FcEK`); use the official shadcn primitive when an interaction exists there (for example Popover + Command for searchable selection, Sheet/Drawer for contextual inspection, Select for filters, Badge for statuses, and Input for fields). Existing `src/components/ui` primitives remain unchanged until deliberately migrated. Extend through AssetHub shared/domain compositions; do not create page-specific replacement primitives or modify a base primitive for one screen. The product routes are the single source of truth. `/ui-option-2` is a compatibility redirect to `/`; it is not a second app or a separate product prototype. Keep the latest approved AssetHub visual direction and request flow in the product routes.
+The base primitive layer is HeroUI React v3. Read `.agents/skills/heroui-react/SKILL.md` and the relevant official v3 documentation before changing controls. Use HeroUI compound components through shared/domain compositions; do not introduce shadcn/ui, Radix, or page-specific replacement primitives. Product routes are the single source of truth. `/ui-option-2` is a compatibility redirect to `/`. Preserve the approved AssetHub visual direction and request behavior.
 
 Layout and responsive composition use the standard Tailwind utility scale and breakpoints. Prefer `gap-2`, `gap-3`, `gap-4`, `gap-6`, `gap-8`, `p-4`, `p-6`, `px-4`, `px-6`, `px-8`, `w-full`, `max-w-*`, and `sm`/`md`/`lg`/`xl`. Avoid arbitrary spacing, width, height, and breakpoint values unless a controlled media viewport or safe-area calculation genuinely requires one. AssetHub tokens remain the source for semantic colors, typography, radius, and status meaning.
 
@@ -27,17 +27,17 @@ Use Inter Variable as the shared UI font. Follow the Page Title, Section Title, 
 
 The authoritative New Request flow is `Usage & Dates -> Select Assets -> Fulfillment -> Review & Submit`. Select Assets is the picker itself, not a confirmation step; Readiness is an inline validation state during selection and final review, not a standalone step.
 
-CSS ownership is strict: official shadcn components own primitive interaction surfaces; `src/styles/tokens.css` owns semantic theme aliases and AssetHub tokens; Tailwind utilities own layout/spacing/responsive composition; TypeScript owns state and behavior; shared/domain components own product compositions; `src/app/globals.css` is limited to imports, base normalization, tokens-adjacent global utilities, and legacy composition rules being migrated. Do not add feature-specific global selectors when a component composition can own the layout.
+CSS ownership is strict: HeroUI components own primitive interaction surfaces; `src/styles/tokens.css` owns semantic theme aliases and AssetHub tokens; Tailwind utilities own layout/spacing/responsive composition; TypeScript owns state and behavior; shared/domain components own product compositions; `src/app/globals.css` is limited to imports, base normalization, tokens-adjacent global utilities, and legacy composition rules being migrated. Do not add feature-specific global selectors when a component composition can own the layout.
 
 Do not:
 - build large page-specific UI from arbitrary Tailwind;
 - introduce new colors/radii/spacing outside tokens;
 - modify a base primitive to fix one screen;
-- clone default shadcn demos;
+- clone component-library demo layouts;
 - shrink desktop layouts and call them mobile.
 
 ## Base primitives
-Treat `components/ui` (or the project's equivalent) as vendored/foundation primitives. Reuse and extend through shared/domain components.
+Import base primitives from `@heroui/react`; compose them in shared/domain components. Theme them centrally in `src/styles/tokens.css`.
 
 ## Mobile
 For mobile tasks, read:

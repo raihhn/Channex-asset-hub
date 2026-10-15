@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AssetArtwork } from "@/components/domain/asset-artwork";
 import { AssetClassification } from "@/components/domain/asset-classification";
 import { AssetStatus } from "@/components/domain/asset-status";
-import { AppIcon } from "@/components/ui/app-icon";
+import { AppIcon } from "@/components/shared/app-icon";
 import type { Asset } from "@/types/prototype";
 
 export function AssetCard({
@@ -26,8 +26,9 @@ export function AssetCard({
             <span>{asset.brand}</span>
             <AssetStatus status={asset.availability} />
           </div>
-          <h3>{asset.name}</h3>
-          <p className="asset-card__type">{asset.type}</p>
+          <h3 className="line-clamp-2" title={asset.name}>{asset.name}</h3>
+          <p className="asset-card__type line-clamp-2" title={asset.type}>{asset.type}</p>
+          {asset.importInfo ? <p className="text-muted text-sm">{asset.totalQuantity ?? "—"} {asset.unitPolicy?.stockUnit ?? "UoM belum diisi"}{asset.importInfo.eventName ? ` · ${asset.importInfo.eventName}` : ""}</p> : null}
           <div className="asset-card__classification"><AssetClassification asset={asset} /></div>
           <dl className="asset-card__facts">
             <div>

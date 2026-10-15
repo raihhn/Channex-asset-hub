@@ -2,7 +2,7 @@
 
 ## Slice 4 prototype boundary
 
-This is an in-memory, frontend-only workflow. It does not add Supabase, persistence, production authentication, role permissions, notifications, or backend Slice 1. Reloading resets actions to fixture state. The underlying unit of return is one physical RequestItem with a stable `requestItemId`; a Custom Booth requirement without a physical Asset has no return receipt.
+This is an in-memory, frontend-only workflow. It does not add Supabase, persistence, production authentication, role permissions, background notifications, or backend Slice 1. Reloading resets actions to fixture state. The underlying unit of return is one physical RequestItem with a stable `requestItemId`; a Custom Booth requirement without a physical Asset has no return receipt.
 
 ## Evidence and transitions
 
@@ -31,4 +31,14 @@ The Operations calendar and Request/Asset Detail read the same receipt-backed st
 
 Slice 5 adds a manual [Maintenance Workflow](MAINTENANCE_WORKFLOW.md) handoff after Confirm Received. It requires the exact physical RequestItem and its confirmed receipt. Creating or accepting Maintenance never changes actual inbound, receipt, Asset location, or custody.
 
-No automatic Missing inference, maintenance creation, reminders, production role enforcement, stock/quantity allocation, per-component reconciliation, or attachment/document upload is implemented. A quantity greater than one on a single RequestItem is not a per-unit return ledger. Durable receipt storage, idempotent concurrent writes, authoritative outbound events, timezones, and reconciliation of legacy Completed-without-receipt records need later decisions before production use.
+No automatic Missing inference, maintenance creation, background reminder delivery, production role enforcement, stock/quantity allocation, or per-component reconciliation is implemented. Durable attachment/document upload remains deferred. A quantity greater than one on a single RequestItem is not a per-unit return ledger. Durable receipt storage, idempotent concurrent writes, production outbound persistence, timezones, and reconciliation of legacy Completed-without-receipt records need later decisions before production use.
+
+## Loading-out letter at return initiation
+
+The optional Start Return form accepts up to five PDF/image loading-out letters, 5 MB each, on the exact physical RequestItem. They are stored on its ReturnReceipt as local data URLs in the current frontend session and remain visible after receiving/inspection. Uploading or starting return does not establish actual inbound; Confirm Received remains the only receipt authority. Durable attachment storage remains deferred.
+
+## Actual outbound follow-up
+
+Approved Request dispatch and usage-destination receipt are now implemented as explicit frontend prototype evidence. See [Approved Request Outbound](OUTBOUND_WORKFLOW.md). Historical records are not inferred. This supersedes the planning-only outbound limitation for newly recorded handovers; automatic linked Return tasks and in-app reminders now follow `../experience/BOOKING_TRACKING.md`. Durable operational records and background notification delivery remain pending.
+
+New actual receiving-location selections use the same database Vendor warehouse projection as Requests and Transfers; legacy receipt history remains unchanged. Internal receiving locations retain their existing references. The projection supplies only active, complete Vendor destinations and never substitutes demo vendors when unavailable.

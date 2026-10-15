@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import {stockUnit} from "@/lib/domain/asset-units";
 import { MapPin, Undo2 } from "lucide-react";
-import { Card, Chip } from "@heroui/react";
+import { useState, type ReactNode } from "react";
+import { Button, Card, Chip } from "@heroui/react";
 
 import { AssetArtwork } from "@/components/domain/asset-artwork";
-import { RequestStatus } from "@/components/domain/request-status";
 import { AppShell } from "@/components/shared/app-shell";
+import { WorkflowDisclosure } from "@/components/shared/workflow-disclosure";
 import { EmptyState } from "@/components/shared/empty-state";
 import { usePrototype } from "@/features/prototype/prototype-provider";
 import { getParentEvent } from "@/lib/domain/events";
@@ -14,15 +16,46 @@ import {
   deriveReservations,
   getReservationPhaseState,
 } from "@/lib/domain/reservations";
-import { findReturnReceipt, getReturnProgress } from "@/lib/domain/returns";
+import { requestJourney } from "@/lib/domain/request-journey";
+import { JourneyTimeline } from "@/components/domain/journey-timeline";
+import { useLocalNow } from "@/components/shared/use-local-now";
+import { RequestOutboundSection } from "@/features/requests/request-outbound-section";
 import { RequestReviewSection } from "@/features/requests/request-review-section";
 import { FinancialReferencesSection } from "@/components/domain/financial-references-section";
 
 export function RequestDetailScreen({ requestId }: { requestId: string }) {
-  const { requests, wbsReferences, events, assets, returnReceipts, maintenanceRecords, bookingLoading, bookingError } =
-    usePrototype();
-  if (bookingLoading) return <AppShell pageLabel="Request detail"><p className="p-6" role="status">Loading saved request…</p></AppShell>;
-  if (bookingError) return <AppShell pageLabel="Request detail"><p className="p-6" role="alert">Could not load saved request: {bookingError}</p></AppShell>;
+  const {
+    requests,
+    currentUser,
+    approvalAssignments,
+    wbsReferences,
+    events,
+    assets,
+    returnReceipts,
+    outboundDispatches,
+    bookingLoading,
+    bookingError,
+  } = usePrototype();
+  const [actionPanel, setActionPanel] = useState<"review" | "delivery" | null>(
+    null,
+  );
+  const localNow = useLocalNow();
+  if (bookingLoading)
+    return (
+      <AppShell pageLabel="Request detail">
+        <p className="p-6" role="status">
+          Loading saved request…
+        </p>
+      </AppShell>
+    );
+  if (bookingError)
+    return (
+      <AppShell pageLabel="Request detail">
+        <p className="p-6" role="alert">
+          Could not load saved request: {bookingError}
+        </p>
+      </AppShell>
+    );
   const request = requests.find((item) => item.id === requestId);
   const requestWbsReferences = (request?.wbsReferenceIds ?? []).flatMap(
     (id) => {
@@ -34,10 +67,14 @@ export function RequestDetailScreen({ requestId }: { requestId: string }) {
     ? events.find((event) => event.id === request.eventId)
     : undefined;
   const requestReservations = request
-    ? deriveReservations([request], assets, events, returnReceipts)
+    ? deriveReservations(
+        [request],
+        assets,
+        events,
+        returnReceipts,
+        outboundDispatches,
+      )
     : [];
-  const now = new Date();
-  const localNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   if (!request) {
     return (
@@ -60,23 +97,258 @@ export function RequestDetailScreen({ requestId }: { requestId: string }) {
     ? `${request.spaceLength || "—"} × ${request.spaceWidth || "—"} × ${request.spaceHeight || "—"} m`
     : "Not provided";
 
+  const journey = requestJourney(
+    request,
+    outboundDispatches,
+    returnReceipts,
+    localNow,
+  );
+  const reviewActive = journey.review;
+  const outboundActive = journey.needsDelivery;
+  const actionOpen = actionPanel === (reviewActive ? "review" : "delivery");
+  const dispatches = outboundDispatches.filter(
+    (record) => record.requestId === request.id,
+  );
+  const canManageReview =
+    currentUser.roles.includes("SUPER_ADMIN") ||
+    approvalAssignments.some(
+      (assignment) =>
+        assignment.requestId === request.id &&
+        assignment.status === "Pending" &&
+        assignment.reviewerUserId === currentUser.id,
+    );
+
   return (
-    <AppShell pageLabel="Request detail">
-      <div className="request-detail-screen request-record">
-        <header className="request-record__header">
-          <div>
-            <Link href="/requests">← Requests</Link>
-            <p>{request.id}</p>
-            <h1>{request.projectName ?? request.purpose}</h1>
-            <span>
-              Borrowing period · {request.startDate} to {request.endDate}
-            </span>
+    <AppShell pageLabel="Request detail" showHeaderSearch={false}>
+      <div className="mx-auto max-w-6xl space-y-6 pb-24">
+        <header className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-2">
+            <Link className="text-accent text-xs font-medium" href="/requests">
+              ← Requests
+            </Link>
+            <p className="text-muted text-xs">{request.id}</p>
+            <h1 className="text-3xl font-bold tracking-tight break-words">
+              {request.projectName ?? request.purpose}
+            </h1>
+            <p className="text-muted text-sm">
+              {request.startDate} – {request.endDate} ·{" "}
+              {request.projectAddress ?? request.destination}
+            </p>
           </div>
-          <RequestStatus status={request.status} />
+          <Chip
+            size="sm"
+            variant="soft"
+            color={
+              journey.attention.length
+                ? "warning"
+                : journey.complete
+                  ? "success"
+                  : "accent"
+            }
+          >
+            {journey.label}
+          </Chip>
         </header>
-        <RequestReviewSection request={request} />
-        <div className="request-record__grid">
-          <section>
+        <Card
+          className="border-border gap-5 border p-4 sm:p-6"
+          aria-label="Current request step"
+        >
+          <Card.Header className="gap-2">
+            <p className="text-accent text-xs font-medium">Booking status</p>
+            <h2 className="text-2xl font-semibold">{journey.label}</h2>
+            <p className="text-muted text-sm">{journey.description}</p>
+          </Card.Header>
+          <Card.Content>
+            <JourneyTimeline steps={journey.steps} />
+          </Card.Content>
+          <Card.Footer className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+            <span className="text-muted text-xs">
+              Return by {request.returnDate ?? request.endDate} ·{" "}
+              {request.returnTime ?? "23:59"}
+            </span>
+            {request.status === "Needs update" ? (
+              <Link
+                className="text-accent text-sm font-medium"
+                href={`/request/new?revise=${request.id}`}
+              >
+                Revise request →
+              </Link>
+            ) : reviewActive &&
+              canManageReview &&
+              request.status === "Pending approval" ? (
+              <Button
+                variant="secondary"
+                onPress={() => setActionPanel(actionOpen ? null : "review")}
+              >
+                {actionOpen ? "Close approval actions" : "Manage approval"}
+              </Button>
+            ) : outboundActive ? (
+              <Button
+                variant="secondary"
+                onPress={() => setActionPanel(actionOpen ? null : "delivery")}
+              >
+                {actionOpen ? "Close delivery actions" : "Manage delivery"}
+              </Button>
+            ) : journey.tasks.length ? (
+              <Link
+                className="text-accent text-sm font-medium"
+                href={`/requests/${request.id}/return`}
+              >
+                {journey.complete ? "View return records" : "Process return"} →
+              </Link>
+            ) : null}
+          </Card.Footer>
+        </Card>
+        {request.approvalComment ? (
+          <Card className="gap-2 p-4">
+            <p className="text-sm font-medium">Reviewer feedback</p>
+            <p className="text-muted text-sm">{request.approvalComment}</p>
+          </Card>
+        ) : null}
+        {actionOpen && reviewActive ? (
+          <RequestReviewSection request={request} compact />
+        ) : null}
+        {actionOpen && outboundActive ? (
+          <RequestOutboundSection request={request} />
+        ) : null}
+        <Card className="border-border gap-4 border p-4 sm:p-5">
+          <p className="text-muted text-xs font-medium">Requested assets</p>
+          <h2 className="text-lg font-semibold">
+            {request.items.length
+              ? `${request.items.length} ${request.items.length === 1 ? "asset" : "assets"} in this request`
+              : request.boothType === "Custom Booth"
+                ? "Custom Booth · no existing Asset required"
+                : "No physical assets selected"}
+          </h2>
+          <div className="request-record__items grid gap-3 sm:grid-cols-2">
+            {request.items.map((item) => {
+              const asset = assets.find(
+                (candidate) => candidate.id === item.assetId,
+              );
+              return asset ? (
+                <article
+                  className="border-border flex min-w-0 items-start gap-3 rounded-xl border p-3"
+                  key={item.id}
+                >
+                  <div className="w-14 shrink-0 overflow-hidden rounded-lg">
+                    <AssetArtwork
+                      asset={asset}
+                      variant="tile"
+                      aspectRatio="1:1"
+                      showLabels={false}
+                    />
+                  </div>
+                  <div className="grid min-w-0 flex-1 gap-1 text-xs">
+                    <Link
+                      className="text-accent line-clamp-2 text-sm font-semibold"
+                      title={asset.name}
+                      href={`/assets/${asset.id}`}
+                    >
+                      {asset.name}
+                    </Link>
+                    <span>
+                      {item.quantity} {item.stockUnit ?? stockUnit(asset)} · {asset.category} · {asset.brand}
+                    </span>
+                    <small className="text-muted line-clamp-2">
+                      Planned return to{" "}
+                      {request.returnGroups?.find((group) =>
+                        group.itemIds.includes(item.id),
+                      )?.to ??
+                        outboundDispatches
+                          .flatMap((record) => record.items)
+                          .find((entry) => entry.requestItemId === item.id)
+                          ?.sourceLocation ??
+                        asset.location}
+                    </small>
+                  </div>
+                </article>
+              ) : null;
+            })}
+          </div>
+        </Card>
+
+        {journey.tasks.length ? (
+          <Card
+            aria-label="Request return"
+            className="border-border gap-4 border p-4 sm:p-5"
+          >
+            <Card.Header>
+              <Card.Title>Return tracking</Card.Title>
+              <Card.Description>
+                The return is linked to this booking automatically.
+              </Card.Description>
+            </Card.Header>
+            <Card.Content className="grid gap-3">
+              {journey.tasks.map((task) => {
+                const receipt = returnReceipts.find(
+                  (receipt) => receipt.requestItemId === task.requestItemId,
+                );
+                const asset = assets.find((asset) => asset.id === task.assetId);
+                return (
+                  <div
+                    key={task.id}
+                    className="border-border flex flex-wrap items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-sm font-medium">
+                        {asset?.name ?? task.assetId}
+                      </p>
+                      <p className="text-muted mt-1 text-xs">
+                        Return by {task.dueAt.replace("T", " · ")} ·{" "}
+                        {task.destination ?? "Destination confirmed on receipt"}
+                      </p>
+                      {task.historical ? (
+                        <p className="text-muted mt-1 text-xs">
+                          Receipt evidence unavailable · physical return not
+                          confirmed
+                        </p>
+                      ) : null}
+                      {receipt?.receivedAt ? (
+                        <p className="text-muted mt-1 text-xs">
+                          Actual inbound ·{" "}
+                          {new Date(receipt.receivedAt).toLocaleString("en-GB")}{" "}
+                          · {receipt.conditionAtReceipt}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Chip
+                      size="sm"
+                      variant="soft"
+                      color={
+                        task.state === "Completed"
+                          ? "success"
+                          : ["Overdue", "On hold"].includes(task.state)
+                            ? "danger"
+                            : "accent"
+                      }
+                    >
+                      {task.state}
+                    </Chip>
+                  </div>
+                );
+              })}
+            </Card.Content>
+            <Card.Footer>
+              <Link
+                className="text-accent text-sm font-medium"
+                href={`/requests/${request.id}/return`}
+              >
+                {journey.complete ? "View return records" : "Process return"} →
+              </Link>
+            </Card.Footer>
+          </Card>
+        ) : null}
+        <section
+          className="grid gap-3"
+          aria-label="Additional request information"
+        >
+          <h2 className="text-muted text-sm font-semibold">
+            Additional information
+          </h2>
+          <RequestDetails
+            key="Project details and documents"
+            title="Project details and documents"
+          >
             <Card className="request-record__overview">
               <div>
                 <p>Project address</p>
@@ -158,37 +430,6 @@ export function RequestDetailScreen({ requestId }: { requestId: string }) {
                 ) : null}
               </dl>
             </Card>
-            <Card className="request-record__panel">
-              <p>Requested assets</p>
-              <h2>
-                {request.items.length
-                  ? `${request.items.length} assets in this request`
-                  : request.boothType === "Custom Booth"
-                    ? "Custom Booth · no existing Asset required"
-                    : "No physical assets selected"}
-              </h2>
-              <div className="request-record__items">
-                {request.items.map((item) => {
-                  const asset = assets.find(
-                    (candidate) => candidate.id === item.assetId,
-                  );
-                  return asset ? (
-                    <article key={asset.id}>
-                      <AssetArtwork asset={asset} variant="tile" />
-                      <div>
-                        <strong>{asset.name}</strong>
-                        <span>
-                          {item.quantity} x {asset.category} · {asset.brand}
-                        </span>
-                        <small>Return to {asset.location}</small>
-                        <Link href={`/assets/${asset.id}`}>View asset</Link>
-                      </div>
-                    </article>
-                  ) : null;
-                })}
-              </div>
-            </Card>
-            <FinancialReferencesSection ownerType="REQUEST" ownerId={request.id} budgetCode={request.budgetCode} wbsCodes={requestWbsReferences.map((reference) => reference.code)} />
             {request.supportingDocuments?.length ? (
               <Card className="request-record__panel">
                 <p>Supporting documents</p>
@@ -217,8 +458,8 @@ export function RequestDetailScreen({ requestId }: { requestId: string }) {
                 </small>
               </Card>
             ) : null}
-          </section>
-          <aside>
+          </RequestDetails>
+          <RequestDetails key="Schedule and routes" title="Schedule and routes">
             <Card className="request-record__panel">
               <p>Fulfillment</p>
               <h2>Loading plan</h2>
@@ -305,6 +546,28 @@ export function RequestDetailScreen({ requestId }: { requestId: string }) {
                           localNow,
                         )}
                       </small>
+                      {reservation.actualOutboundAt ? (
+                        <small>
+                          Actual outbound ·{" "}
+                          {new Date(
+                            reservation.actualOutboundAt,
+                          ).toLocaleString("en-GB", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </small>
+                      ) : null}
+                      {reservation.destinationReceivedAt ? (
+                        <small>
+                          Received at usage destination ·{" "}
+                          {new Date(
+                            reservation.destinationReceivedAt,
+                          ).toLocaleString("en-GB", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </small>
+                      ) : null}
                       {reservation.actualInboundAt ? (
                         <small>
                           Actual inbound ·{" "}
@@ -326,82 +589,48 @@ export function RequestDetailScreen({ requestId }: { requestId: string }) {
                 it.
               </small>
             </Card>
-            <Card className="request-record__panel">
-              <p>Returns</p>
-              <h2>Item return status</h2>
-              {request.items.length ? (
-                <ul className="request-reservation-panel__items">
-                  {request.items.map((item) => {
-                    const asset = assets.find(
-                      (candidate) => candidate.id === item.assetId,
-                    );
-                    const receipt = findReturnReceipt(returnReceipts, item.id);
-                    return (
-                      <li key={item.id}>
-                        <strong>{asset?.name ?? item.assetId}</strong>
-                        {maintenanceRecords.filter((record) => record.sourceRequestItemId === item.id).map((record) => <small key={record.id}>Maintenance: <Link href={`/maintenance/${record.id}`}>{record.status} · {record.id}</Link></small>)}
-                        <span>
-                          {getReturnProgress(
-                            receipt,
-                            request.returnDate
-                              ? `${request.returnDate}T${request.returnTime ?? "23:59"}`
-                              : `${request.endDate}T23:59`,
-                            localNow,
-                          )}
-                        </span>
-                        <small>
-                          Expected · {request.returnDate ?? request.endDate} ·{" "}
-                          {request.returnTime ?? "23:59"}
-                        </small>
-                        {receipt?.receivedAt ? (
-                          <small>
-                            Received ·{" "}
-                            {new Date(receipt.receivedAt).toLocaleString(
-                              "en-GB",
-                              { dateStyle: "medium", timeStyle: "short" },
-                            )}{" "}
-                            · Condition: {receipt.conditionAtReceipt}
-                          </small>
-                        ) : (
-                          <small>
-                            {request.status === "Completed"
-                              ? "Receipt evidence unavailable · physical return not confirmed"
-                              : "No actual inbound recorded"}
-                          </small>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
-              {request.items.length ? (
-                <Link
-                  className="return-workflow-link"
-                  href={`/requests/${request.id}/return`}
-                >
-                  Open return workflow →
-                </Link>
-              ) : null}
-              <h2>Where assets return</h2>
-              {request.returnGroups?.length ? (
-                request.returnGroups.map((group) => (
-                  <div className="request-record__route" key={group.id}>
-                    <strong>
-                      <Undo2 size={14} /> {group.to}
-                    </strong>
-                    <span>{group.itemIds.length} asset(s)</span>
-                    <small>{group.window}</small>
-                  </div>
-                ))
-              ) : (
-                <span>
-                  Return instructions will be assigned after approval.
-                </span>
-              )}
-            </Card>
-          </aside>
-        </div>
+          </RequestDetails>
+          <RequestDetails
+            key="Budget and references"
+            title="Budget and references"
+          >
+            <FinancialReferencesSection
+              ownerType="REQUEST"
+              ownerId={request.id}
+              budgetCode={request.budgetCode}
+              wbsCodes={requestWbsReferences.map((reference) => reference.code)}
+            />
+          </RequestDetails>
+          {!reviewActive || !actionOpen ? (
+            <RequestDetails key="Review history" title="Review history">
+              <RequestReviewSection request={request} />
+            </RequestDetails>
+          ) : null}
+          {!outboundActive && dispatches.length ? (
+            <RequestDetails key="Handover history" title="Handover history">
+              <RequestOutboundSection request={request} />
+            </RequestDetails>
+          ) : null}
+        </section>
       </div>
     </AppShell>
+  );
+}
+
+function RequestDetails({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <WorkflowDisclosure
+      title={title}
+      variant="ghost"
+      className="border-border bg-surface rounded-xl border p-3"
+    >
+      {children}
+    </WorkflowDisclosure>
   );
 }

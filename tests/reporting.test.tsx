@@ -71,6 +71,12 @@ describe("operational report projection", () => {
     expect(rows.some((row) => row.requestId === adHoc.id && ["Transfer", "Return", "Inspection"].includes(row.category))).toBe(false);
   });
 
+  it("reports transfer execution only from explicit dispatch and receipt records",()=>{
+    const rows=deriveOperationalReport({...data,transferPlans:[{...data.transferPlans[0],dispatchedAt:"2026-10-03T09:00:00+07:00",dispatchedByUserId:"dev-user",senderPic:"Sender",receivedAt:"2026-10-03T10:00:00+07:00",receivedByUserId:"user-storedev",receiverPic:"Receiver",conditionAtReceipt:"Good"}]});
+    expect(rows.filter(row=>row.category==="Transfer").map(row=>row.type)).toEqual(expect.arrayContaining(["Transfer planned","Transfer dispatched","Transfer received"]));
+    expect(rows.find(row=>row.type==="Transfer received")).toMatchObject({actorUserId:"user-storedev",status:"Received"});
+  });
+
   it("intersects Brand, activity, Request, Asset, Vendor, WBS, type, status, and reference filters", () => {
     const rows = deriveOperationalReport(data);
     const common = { from: "2026-10-01", to: "2026-10-31", brandId: "EMN", requestId: request.id, assetId: "emina-play-modular", wbsReferenceId: "wbs-activity-alpha" };

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AppIcon } from "@/components/ui/app-icon";
+import { AppIcon } from "@/components/shared/app-icon";
 import type { Asset } from "@/types/prototype";
 
 export function AssetIssueSummary({ asset }: { asset: Asset }) {

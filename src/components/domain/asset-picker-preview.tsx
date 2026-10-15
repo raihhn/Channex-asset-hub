@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@heroui/react";
-import { AppIcon } from "@/components/ui/app-icon";
+import { AppIcon } from "@/components/shared/app-icon";
 import type { Asset } from "@/types/prototype";
 import { AssetArtwork } from "./asset-artwork";
 
@@ -28,23 +28,30 @@ export function AssetPickerPreview({ asset }: { asset: Asset }) {
         touchStart.current = event.touches[0].clientX;
       }}
     >
-      <AssetArtwork asset={asset} />
+      <AssetArtwork asset={asset} photo={photo} />
       <span>
-        {photo?.view ?? "No photo"} · {index + 1}/{asset.photos.length}
+        {photo?.view ?? "No photo"} · {asset.photos.length ? index + 1 : 0}/
+        {asset.photos.length}
       </span>
       <div>
         <Button
           aria-label={`Previous preview for ${asset.name}`}
           isDisabled={!index}
-          onClick={() => move(-1)}
-          isIconOnly size="sm" variant="secondary">
+          onPress={() => move(-1)}
+          isIconOnly
+          size="sm"
+          variant="secondary"
+        >
           <AppIcon name="chevron-left" />
         </Button>
         <Button
           aria-label={`Next preview for ${asset.name}`}
-          isDisabled={index === asset.photos.length - 1}
-          onClick={() => move(1)}
-          isIconOnly size="sm" variant="secondary">
+          isDisabled={!asset.photos.length || index >= asset.photos.length - 1}
+          onPress={() => move(1)}
+          isIconOnly
+          size="sm"
+          variant="secondary"
+        >
           <AppIcon name="chevron-right" />
         </Button>
       </div>

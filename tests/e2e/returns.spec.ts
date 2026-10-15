@@ -5,7 +5,21 @@ async function confirmKahfReturn(page: Page) {
   const item = page
     .locator(".return-item-card")
     .filter({ hasText: "Mountain Booth 3×5" });
+  await item
+    .getByRole("button", { name: "Prepare return", exact: true })
+    .click();
+  await item.getByLabel("Upload Loading-out letter").setInputFiles({
+    name: "loading-out.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4 local loading-out letter"),
+  });
+  await expect(
+    item.getByRole("link", { name: "loading-out.pdf" }),
+  ).toBeVisible();
   await item.getByRole("button", { name: "Start Return" }).click();
+  await expect(
+    item.getByRole("link", { name: "loading-out.pdf" }),
+  ).toBeVisible();
   await expect(item).toContainText("Not received");
   await expect(item).toContainText("Jakarta Hub");
   await item
@@ -17,7 +31,7 @@ async function confirmKahfReturn(page: Page) {
     .locator("button")
     .click();
   await page
-    .getByRole("option", { name: "Cakung Production Workshop · Jakarta Timur" })
+    .getByRole("option", { name: "Ofsorts — Jakarta" })
     .click();
   await item
     .locator(".hero-select")
@@ -33,18 +47,23 @@ test("normal Return requires initiation and explicit receiver confirmation", asy
   page,
 }) => {
   const item = await confirmKahfReturn(page);
-  await expect(item).toContainText("Received · inspection pending");
+  await expect(item).toContainText("Inspection pending");
   await expect(item).toContainText("Bima Receiver");
-  await expect(item).toContainText("Cakung Production Workshop");
-  await expect(item).not.toContainText("Not received");
-  await page.getByRole("link", { name: "← Request detail" }).click();
   await expect(
-    page.getByText("Actual inbound ·", { exact: false }),
+    item.getByRole("link", { name: "loading-out.pdf" }),
+  ).toBeVisible();
+  await expect(item).toContainText("Ofsorts — Jakarta");
+  await expect(item).not.toContainText("Not received");
+  await page.getByRole("link", { name: "← Booking tracking" }).click();
+  await expect(
+    page
+      .getByLabel("Request return")
+      .getByText("Actual inbound ·", { exact: false }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Mountain Booth 3×5" }).click();
   await expect(page.getByText("Bima Receiver", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Cakung Production Workshop", { exact: true }),
+    page.getByText("Ofsorts — Jakarta", { exact: true }),
   ).toBeVisible();
 });
 
@@ -58,14 +77,14 @@ test("partial Return keeps the other physical item overdue and without actual in
   const outstanding = page
     .locator(".return-item-card")
     .filter({ hasText: "Colorfit Product Wall" });
-  await expect(received).toContainText("Received · inspection pending");
+  await expect(received).toContainText("Inspection pending");
   await expect(received).toContainText("3 Oct 2026");
   await expect(outstanding).toContainText("Overdue");
   await expect(outstanding).toContainText("Not received");
   await expect(outstanding).not.toContainText("Missing");
   await page.goto("/requests/REQ-2026-030");
   await expect(
-    page.getByText("Received · inspection pending", { exact: true }),
+    page.getByText("Inspection pending", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Overdue", { exact: true })).toBeVisible();
 });
@@ -74,8 +93,13 @@ test("calendar shows Inbound Completed only after a linked receipt", async ({
   page,
 }) => {
   await page.goto("/operations");
+  const monthLabel = page.locator(".operational-calendar__month-controls strong");
+  const initialMonth = await monthLabel.innerText();
   await page.getByRole("button", { name: "Previous month" }).click();
+  await expect(monthLabel).not.toHaveText(initialMonth);
+  const previousMonth = await monthLabel.innerText();
   await page.getByRole("button", { name: "Previous month" }).click();
+  await expect(monthLabel).not.toHaveText(previousMonth);
   const before = page
     .locator(".operational-calendar__bookings li")
     .filter({ hasText: "Mountain Booth 3×5" });
@@ -115,7 +139,9 @@ test("legacy Completed request stays physically unconfirmed and reserved", async
     ),
   ).toBeVisible();
   await expect(
-    page.getByText("Actual inbound ·", { exact: false }),
+    page
+      .getByLabel("Request return")
+      .getByText("Actual inbound ·", { exact: false }),
   ).toHaveCount(0);
 
   await page.goto("/assets/make-over-studio-counter");

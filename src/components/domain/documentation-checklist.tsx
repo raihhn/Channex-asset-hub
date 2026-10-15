@@ -1,4 +1,4 @@
-import { AppIcon } from "@/components/ui/app-icon";
+import { AppIcon } from "@/components/shared/app-icon";
 import Link from "next/link";
 import type { Asset } from "@/types/prototype";
 

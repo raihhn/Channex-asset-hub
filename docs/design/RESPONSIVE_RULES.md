@@ -25,3 +25,7 @@ Booking/approval primary actions may be sticky on mobile when they remain contex
 
 ## Tables
 Do not horizontally squeeze desktop tables into unreadable mobile layouts. Provide card/list representation or deliberately scoped horizontal scroll only when necessary.
+
+## Bottom navigation clearance
+
+The shared app-shell content reserves `--layout-mobile-bottom-clearance` plus the device safe-area inset while bottom navigation is visible, including tablet widths below the desktop sidebar breakpoint. Keep the final list action fully scrollable above the fixed navbar; do not repair footer actions with higher z-index. Desktop restores normal bottom padding when mobile navigation is hidden.

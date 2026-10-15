@@ -22,7 +22,7 @@ Already represented:
 - multi-item request picker with quantity and date-aware availability;
 - registered event context and vendor workshop fixtures;
 - pickup/delivery fulfillment groups with pickup and return date-time;
-- a fixture-only Transfer / Handover screen at `/transfers` with governed destination selection, responsible party, condition, and required photo-view checklist;
+- a frontend Transfer tracking screen at `/transfers` with governed destination, explicit sending/receiving confirmation, condition and a photo-view checklist;
 - request review, approval fixture, return inspection direction, and operations queue;
 - responsive web composition using official shadcn/ui primitives.
 
@@ -32,7 +32,7 @@ Deferred:
 - native/offline mobile execution and QR scanning;
 - vendor-facing accounts and scoped history enforcement;
 - governed Vendor/Event/Store/Warehouse/PIC master-data CRUD;
-- persistent Transfer/Handover approval and receiving confirmation (the prototype now covers the preparation step only);
+- persistent Transfer/Handover and its approval policy (the prototype now records preparation, dispatch and receipt in memory);
 - mandatory inspection-session/photo validation;
 - parent-child component records and partial component reuse;
 - reservation/dispatch state transitions, bulk requests, notifications, exports, recycling, and material stock.

@@ -1,43 +1,58 @@
 "use client";
 
 import Link from "next/link";
+import {
+  borrowingUnits,
+  stockUnit,
+  changeBorrowQuantity,
+  type AssetUnit,
+} from "@/lib/domain/asset-units";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
+  PackageOpen,
+  FileUp,
   Check,
   MapPin,
   Minus,
   Plus,
-  Search,
   Undo2,
   X,
 } from "lucide-react";
-import { Button, Card, Chip, Input, TextArea } from "@heroui/react";
+import {
+  Button,
+  Card,
+  Chip,
+  Input,
+  Modal,
+  SearchField,
+  Radio,
+  RadioGroup,
+  Description,
+  TextArea,
+} from "@heroui/react";
 
+import {
+  RequestSteps,
+  RequestSummary,
+} from "@/components/domain/request-workspace-ui";
 import { AssetArtwork } from "@/components/domain/asset-artwork";
 import { AssetStatus } from "@/components/domain/asset-status";
 import { AppShell } from "@/components/shared/app-shell";
-import { Button as BaseButton } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { HeroSelect } from "@/components/shared/hero-select";
 import { usePrototype } from "@/features/prototype/prototype-provider";
-import { BookingClientError, durableBookingEnabled } from "@/lib/booking-client";
+import {
+  BookingClientError,
+  durableBookingEnabled,
+} from "@/lib/booking-client";
 import { getRequestEligibility } from "@/lib/fixtures/request-eligibility";
 import {
   deriveReservations,
   getOperationalWindowFromFields,
   validateOperationalWindow,
 } from "@/lib/domain/reservations";
-import { registeredLocations } from "@/lib/fixtures/registered-locations";
+import { validateVendorLocation } from "@/lib/vendor-locations-client";
 import { normalizeWbsCode } from "@/lib/domain/wbs-references";
 import {
   getBoothUsageValidation,
@@ -53,9 +68,9 @@ import type {
   PrototypeRequest,
 } from "@/types/prototype";
 
-type Selected = { asset: Asset; quantity: number };
+type Selected = { asset: Asset; quantity: number; borrowUnit?: AssetUnit };
 
-const brands = ["Wardah", "Make Over", "Emina", "Corporate", "Kahf"] as const;
+const defaultBrands = ["Wardah", "Make Over", "Emina", "Corporate", "Kahf"] as const;
 const maxRequestDocumentSize = 5 * 1024 * 1024;
 
 function readFileAsDataUrl(file: File) {
@@ -70,34 +85,80 @@ function readFileAsDataUrl(file: File) {
   });
 }
 
-export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = [] }: { items: Selected[]; revisionRequest?: PrototypeRequest; initialWbsCodes?: string[] }) {
+export function RequestFlowScreen({
+  items,
+  revisionRequest,
+  initialWbsCodes = [],
+}: {
+  items: Selected[];
+  revisionRequest?: PrototypeRequest;
+  initialWbsCodes?: string[];
+}) {
   const router = useRouter();
-  const { assets, events, requests, returnReceipts, createRequest, resubmitRequest, savePersistedRequest, bookingLoading, bookingError, currentUser } = usePrototype();
+  const {
+    catalogAssets: assets,
+    events,
+    requests,
+    returnReceipts,
+    createRequest,
+    resubmitRequest,
+    savePersistedRequest,
+    bookingLoading,
+    bookingError,
+    currentUser,
+    operationalLocations: registeredLocations,
+    vendorLoading,
+    vendorError,
+  } = usePrototype();
+  const brands = [...new Set([...defaultBrands, ...assets.map(asset => asset.brand)])].filter(brand => !["All Brand", "Belum diketahui"].includes(brand));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const attempt = useRef<{ payload: string; key: string } | null>(null);
-  const [brand, setBrand] = useState<(typeof brands)[number]>((revisionRequest?.brand as (typeof brands)[number]) ?? "Wardah");
+  const [brand, setBrand] = useState<(typeof brands)[number]>(
+    (revisionRequest?.brand as (typeof brands)[number]) ?? "Wardah",
+  );
   const brandEvents = getSelectableEvents(events, brand);
-  const [eventId, setEventId] = useState(revisionRequest?.eventId ?? brandEvents[0]?.id ?? "");
+  const [eventId, setEventId] = useState(
+    revisionRequest?.eventId ?? brandEvents[0]?.id ?? "",
+  );
   const event = events.find(
     (item) => item.id === eventId && item.brand === brand,
   );
-  const [projectName, setProjectName] = useState(revisionRequest?.projectName ?? event?.name ?? "");
-  const [projectAddress, setProjectAddress] = useState(
-    revisionRequest?.projectAddress ?? (event ? `${event.venue}, ${event.city}` : ""),
+  const [projectName, setProjectName] = useState(
+    revisionRequest?.projectName ?? event?.name ?? "",
   );
-  const [siteContact, setSiteContact] = useState(revisionRequest?.siteContact ?? event?.pic ?? "");
-  const [spaceLength, setSpaceLength] = useState(revisionRequest?.spaceLength ?? "");
-  const [spaceWidth, setSpaceWidth] = useState(revisionRequest?.spaceWidth ?? "");
-  const [spaceHeight, setSpaceHeight] = useState(revisionRequest?.spaceHeight ?? "");
-  const [projectDetails, setProjectDetails] = useState(revisionRequest?.projectDetails ?? "");
-  const [budgetCode, setBudgetCode] = useState(revisionRequest?.budgetCode ?? "");
+  const [projectAddress, setProjectAddress] = useState(
+    revisionRequest?.projectAddress ??
+      (event ? `${event.venue}, ${event.city}` : ""),
+  );
+  const [siteContact, setSiteContact] = useState(
+    revisionRequest?.siteContact ?? event?.pic ?? "",
+  );
+  const [spaceLength, setSpaceLength] = useState(
+    revisionRequest?.spaceLength ?? "",
+  );
+  const [spaceWidth, setSpaceWidth] = useState(
+    revisionRequest?.spaceWidth ?? "",
+  );
+  const [spaceHeight, setSpaceHeight] = useState(
+    revisionRequest?.spaceHeight ?? "",
+  );
+  const [projectDetails, setProjectDetails] = useState(
+    revisionRequest?.projectDetails ?? "",
+  );
+  const [budgetCode, setBudgetCode] = useState(
+    revisionRequest?.budgetCode ?? "",
+  );
   const [supportingDocuments, setSupportingDocuments] = useState<
     RequestDocument[]
   >(revisionRequest?.supportingDocuments ?? []);
   const [documentError, setDocumentError] = useState("");
-  const [startDate, setStartDate] = useState(revisionRequest?.startDate ?? event?.startDate ?? "2026-08-12");
-  const [endDate, setEndDate] = useState(revisionRequest?.endDate ?? event?.endDate ?? "2026-08-16");
+  const [startDate, setStartDate] = useState(
+    revisionRequest?.startDate ?? event?.startDate ?? "2026-08-12",
+  );
+  const [endDate, setEndDate] = useState(
+    revisionRequest?.endDate ?? event?.endDate ?? "2026-08-16",
+  );
   const [selected, setSelected] = useState<Selected[]>(() =>
     items.length ? items : [],
   );
@@ -114,9 +175,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
     "Registered event" | "Vendor workshop" | "Ad-hoc"
   >(revisionRequest?.usageType ?? "Registered event");
   const [locationId, setLocationId] = useState(
-    revisionRequest?.destinationLocationId ?? registeredLocations.find(
-      (location) => location.type === "Internal warehouse",
-    )?.id ?? "",
+    revisionRequest?.destinationLocationId ??
+      registeredLocations.find(
+        (location) => location.type === "Internal warehouse",
+      )?.id ??
+      "",
   );
   const [fulfillmentMethod, setFulfillmentMethod] = useState<
     "Delivery" | "Pickup"
@@ -125,16 +188,24 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
   const [fulfillmentDate, setFulfillmentDate] = useState(
     revisionRequest?.pickupDate ?? event?.startDate ?? "2026-08-12",
   );
-  const [fulfillmentTime, setFulfillmentTime] = useState(revisionRequest?.pickupTime ?? "10:00");
+  const [fulfillmentTime, setFulfillmentTime] = useState(
+    revisionRequest?.pickupTime ?? "10:00",
+  );
   const [fulfillmentReturnDate, setFulfillmentReturnDate] = useState(
     revisionRequest?.returnDate ?? event?.endDate ?? "2026-08-16",
   );
-  const [fulfillmentReturnTime, setFulfillmentReturnTime] = useState(revisionRequest?.returnTime ?? "12:00");
-  const [adHocPurpose, setAdHocPurpose] = useState<string>(revisionRequest?.adHocPurpose ?? "Photoshoot");
+  const [fulfillmentReturnTime, setFulfillmentReturnTime] = useState(
+    revisionRequest?.returnTime ?? "12:00",
+  );
+  const [adHocPurpose, setAdHocPurpose] = useState<string>(
+    revisionRequest?.adHocPurpose ?? "Photoshoot",
+  );
   const [adHocLocationType, setAdHocLocationType] = useState<
     "Store" | "Outside Store"
   >(revisionRequest?.adHocLocationType ?? "Store");
-  const [adHocPlace, setAdHocPlace] = useState(revisionRequest?.adHocPlace ?? "");
+  const [adHocPlace, setAdHocPlace] = useState(
+    revisionRequest?.adHocPlace ?? "",
+  );
   const [boothType, setBoothType] = useState<
     "" | "Regular Booth" | "Custom Booth"
   >(revisionRequest?.boothType ?? "");
@@ -173,7 +244,13 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
     operationalWindow,
   );
   const reservations = useMemo(
-    () => deriveReservations(requests.filter((request) => request.id !== revisionRequest?.id), assets, events, returnReceipts),
+    () =>
+      deriveReservations(
+        requests.filter((request) => request.id !== revisionRequest?.id),
+        assets,
+        events,
+        returnReceipts,
+      ),
     [assets, events, requests, returnReceipts, revisionRequest?.id],
   );
   const assetBrands = [...new Set(assets.map((asset) => asset.brand))];
@@ -187,21 +264,41 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
       (assetCategoryFilter === "All categories" ||
         asset.category === assetCategoryFilter),
   );
+  const pickerCriteria = JSON.stringify([query, assetBrandFilter, assetCategoryFilter]);
+  const [pickerPaging, setPickerPaging] = useState({criteria:"", count:24});
+  const pickerCount = pickerPaging.criteria === pickerCriteria ? pickerPaging.count : 24;
   const selectedLocation = registeredLocations.find(
     (location) => location.id === locationId,
   );
+  const resolvedProjectAddress =
+    usageType === "Registered event"
+      ? event
+        ? `${event.venue}, ${event.city}`
+        : ""
+      : projectAddress;
+  const resolvedProjectName =
+    usageType === "Registered event" ? (event?.name ?? "") : projectName;
   const contextError =
-    usageType === "Registered event" && !event
-      ? "Select a registered Event for this Brand."
-      : !projectName.trim()
-        ? "Enter a project name."
-        : !projectAddress.trim()
-          ? "Enter the project's full address."
-          : usageType === "Ad-hoc" &&
-              adHocLocationType === "Store" &&
-              !selectedLocation
-            ? "Select an existing Store location."
-            : "";
+    usageType === "Vendor workshop" && !selectedLocation
+      ? "Choose an active database vendor warehouse to replace this legacy destination."
+      : usageType === "Ad-hoc" &&
+          adHocLocationType === "Outside Store" &&
+          !adHocPlace.trim() &&
+          !selectedLocation
+        ? vendorLoading
+          ? "Loading vendor warehouses…"
+          : vendorError || "Select an active registered destination."
+        : usageType === "Registered event" && !event
+          ? "Select a registered Event for this Brand."
+          : !resolvedProjectName.trim()
+            ? "Enter a project name."
+            : !resolvedProjectAddress.trim()
+              ? "Enter the project's full address."
+              : usageType === "Ad-hoc" &&
+                  adHocLocationType === "Store" &&
+                  !selectedLocation
+                ? "Select an existing Store location."
+                : "";
   const budgetCodeError = !budgetCode.trim();
   const storeLocations = registeredLocations.filter(
     (location) => location.type === "Store",
@@ -216,7 +313,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
           adHocPlace.trim()
         ? adHocPlace.trim()
         : `${selectedLocation?.name ?? "Registered location"}, ${selectedLocation?.city ?? ""}`;
-  const destination = projectAddress.trim() || destinationLabel;
+  const destination = resolvedProjectAddress.trim() || destinationLabel;
   const readiness = useMemo(
     () =>
       selected.map(({ asset, quantity }) => ({
@@ -278,19 +375,20 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
     if (next === "Registered event") {
       setProjectAddress(event ? `${event.venue}, ${event.city}` : "");
       setSiteContact(event?.pic ?? "");
+      return;
     }
-    const preferredLocation = registeredLocations.find(
-      (location) =>
-        location.type ===
-        (next === "Vendor workshop" ? "Vendor workshop" : "Internal warehouse"),
+    const nextLocation = storeLocations.find((location) =>
+      location.name.startsWith(brand),
     );
-    const nextLocation =
-      next === "Ad-hoc"
-        ? storeLocations.find((location) => location.name.startsWith(brand))
-        : preferredLocation;
+    setAdHocLocationType("Store");
+    setAdHocPlace("");
     if (nextLocation) {
       setLocationId(nextLocation.id);
-      setProjectAddress(`${nextLocation.address}, ${nextLocation.city}`);
+      setProjectAddress(
+        nextLocation.vendorId
+          ? nextLocation.address
+          : `${nextLocation.address}, ${nextLocation.city}`,
+      );
       setSiteContact(nextLocation.contact ?? "");
     }
   };
@@ -299,8 +397,13 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
       (location) => location.id === nextId,
     );
     setLocationId(nextId);
+    setAdHocPlace("");
     if (nextLocation) {
-      setProjectAddress(`${nextLocation.address}, ${nextLocation.city}`);
+      setProjectAddress(
+        nextLocation.vendorId
+          ? nextLocation.address
+          : `${nextLocation.address}, ${nextLocation.city}`,
+      );
       setSiteContact(nextLocation.contact ?? "");
     }
   };
@@ -321,12 +424,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
           ? item
           : {
               ...item,
-              quantity: Math.max(
-                1,
-                Math.min(
-                  item.asset.availableQuantity ?? 1,
-                  item.quantity + delta,
-                ),
+              quantity: changeBorrowQuantity(
+                item.asset,
+                item.quantity,
+                item.borrowUnit ?? stockUnit(item.asset),
+                delta,
               ),
             },
       ),
@@ -402,17 +504,25 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
           ? "Other"
           : selectedLocation.type
         : undefined;
+    const usesNewPlace =
+      usageType === "Ad-hoc" &&
+      adHocLocationType === "Outside Store" &&
+      Boolean(adHocPlace.trim());
     const destinationType =
       usageType === "Registered event"
         ? "Event venue"
-        : usageType === "Ad-hoc" && adHocLocationType === "Store"
+        : usesNewPlace ||
+            (usageType === "Ad-hoc" && adHocLocationType === "Store")
           ? "Other"
           : (selectedDestinationType ?? "Internal warehouse");
-    const resolvedActivityName = projectName.trim();
+    const resolvedActivityName = resolvedProjectName.trim();
     const draft: RequestDraft = {
-      items: selected.map(({ asset, quantity }) => ({
+      items: selected.map(({ asset, quantity, borrowUnit }) => ({
         assetId: asset.id,
         quantity,
+        stockUnit: stockUnit(asset),
+        borrowedUnit: borrowUnit ?? stockUnit(asset),
+        unitsPerPackage: asset.unitPolicy?.unitsPerPackage,
       })),
       usageType,
       eventMode:
@@ -429,7 +539,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
           : undefined,
       activityName: resolvedActivityName,
       projectName: resolvedActivityName,
-      projectAddress: projectAddress.trim(),
+      projectAddress: resolvedProjectAddress.trim(),
       siteContact: siteContact.trim() || undefined,
       spaceLength: spaceLength || undefined,
       spaceWidth: spaceWidth || undefined,
@@ -453,7 +563,8 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
       destination,
       destinationType,
       destinationVendorId:
-        usageType === "Vendor workshop"
+        destinationType === "Vendor workshop" ||
+        destinationType === "Vendor warehouse"
           ? selectedLocation?.vendorId
           : undefined,
       destinationLocationId:
@@ -469,7 +580,9 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
           : usageType === "Ad-hoc"
             ? resolvedActivityName || adHocPurpose
             : resolvedActivityName || usageType,
-      contact: revisionRequest?.contact ?? `${currentUser.name} · ${currentUser.email}`,
+      contact:
+        revisionRequest?.contact ??
+        `${currentUser.name} · ${currentUser.email}`,
       pickupDate: fulfillmentDate,
       pickupTime: fulfillmentTime,
       returnDate: fulfillmentReturnDate,
@@ -483,17 +596,23 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
           destination,
           destinationType,
           destinationVendorId:
-            usageType === "Vendor workshop"
+            destinationType === "Vendor workshop" ||
+            destinationType === "Vendor warehouse"
               ? selectedLocation?.vendorId
               : undefined,
           destinationLocationId:
-            usageType === "Registered event" ? undefined : selectedLocation?.id,
+            usageType === "Registered event" || usesNewPlace
+              ? undefined
+              : selectedLocation?.id,
           window: `${fulfillmentDate} ${fulfillmentTime} to ${fulfillmentReturnDate} ${fulfillmentReturnTime}`,
           pickupDate: fulfillmentDate,
           pickupTime: fulfillmentTime,
           returnDate: fulfillmentReturnDate,
           returnTime: fulfillmentReturnTime,
-          contact: revisionRequest?.fulfillmentGroups?.[0]?.contact ?? currentUser.name,
+          contact: selectedLocation?.vendorId
+            ? siteContact
+            : (revisionRequest?.fulfillmentGroups?.[0]?.contact ??
+              currentUser.name),
           itemIds: selected.map((item) => item.asset.id),
           state: "Planned",
         },
@@ -510,41 +629,68 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
     setSubmitting(true);
     setSubmitError("");
     try {
+      if (draft.destinationVendorId && draft.destinationLocationId)
+        await validateVendorLocation(
+          draft.destinationLocationId,
+          currentUser.id,
+        );
       const request = durableBookingEnabled
-        ? await savePersistedRequest(draft, revisionRequest, (() => {
-            const payload = JSON.stringify(draft);
-            if (attempt.current?.payload !== payload) attempt.current = { payload, key: crypto.randomUUID() };
-            return attempt.current.key;
-          })())
-        : revisionRequest ? resubmitRequest(revisionRequest.id, draft) : createRequest(draft);
+        ? await savePersistedRequest(
+            draft,
+            revisionRequest,
+            (() => {
+              const payload = JSON.stringify(draft);
+              if (attempt.current?.payload !== payload)
+                attempt.current = { payload, key: crypto.randomUUID() };
+              return attempt.current.key;
+            })(),
+          )
+        : revisionRequest
+          ? resubmitRequest(revisionRequest.id, draft)
+          : createRequest(draft);
       router.push(`/requests/${request.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not submit this Request.";
-      const assetName = error instanceof BookingClientError && error.assetId ? assets.find((asset) => asset.id === error.assetId)?.name : undefined;
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not submit this Request.";
+      const assetName =
+        error instanceof BookingClientError && error.assetId
+          ? assets.find((asset) => asset.id === error.assetId)?.name
+          : undefined;
       setSubmitError(assetName ? `${assetName}: ${message}` : message);
-      if (error instanceof BookingClientError && (error.code === "CONFLICT" || error.code === "STALE")) {
+      if (
+        error instanceof BookingClientError &&
+        (error.code === "CONFLICT" || error.code === "STALE")
+      ) {
         attempt.current = null;
         setStep(2);
       }
-    } finally { setSubmitting(false); }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (step === 4)
     return (
-      <AppShell pageLabel="Review request">
-        <div className="request-workspace request-review">
-          <header className="request-workspace__header">
+      <AppShell pageLabel="Review request" showHeaderSearch={false}>
+        <div className="mx-auto max-w-6xl space-y-6 pb-32 lg:pb-8">
+          <header className="flex items-start justify-between gap-4">
             <div>
               <Button
                 className="text-link"
                 onPress={() => setStep(3)}
                 size="sm"
-                variant="tertiary"
+                variant="ghost"
               >
                 ← Back to fulfillment
               </Button>
-              <h1>{revisionRequest ? `Review changes to ${revisionRequest.id}` : "Review your request"}</h1>
-              <p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight">
+                {revisionRequest
+                  ? `Review changes to ${revisionRequest.id}`
+                  : "Review your request"}
+              </h1>
+              <p className="text-muted mt-2 max-w-xl text-sm">
                 Confirm the destination, selected assets, and where every asset
                 returns after the activation.
               </p>
@@ -553,21 +699,22 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
               Ready to submit
             </Chip>
           </header>
-          <div className="request-review__grid">
-            <section className="request-review__content">
-              <Card className="review-panel">
-                <p>Usage plan</p>
-                <h2>{projectName}</h2>
-                <dl>
+          <RequestSteps step={4} />
+          <div className="grid items-start gap-6 lg:grid-cols-3">
+            <section className="grid min-w-0 gap-6 lg:col-span-2">
+              <Card className="border-border gap-4 border p-4 sm:p-6">
+                <p className="text-muted text-xs font-medium">Usage plan</p>
+                <h2 className="text-lg font-semibold">{resolvedProjectName}</h2>
+                <dl className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <dt>Usage type</dt>
-                    <dd>
+                    <dt className="text-muted text-xs">Usage type</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
                       {usageType === "Ad-hoc" ? "Ad-hoc Event" : usageType}
                     </dd>
                   </div>
                   <div>
-                    <dt>Brand</dt>
-                    <dd>
+                    <dt className="text-muted text-xs">Brand</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
                       {usageType === "Registered event" ||
                       usageType === "Ad-hoc"
                         ? brand
@@ -576,21 +723,23 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                   </div>
                   {event ? (
                     <div>
-                      <dt>Parent event</dt>
-                      <dd>
+                      <dt className="text-muted text-xs">Parent event</dt>
+                      <dd className="mt-1 text-sm font-medium break-words">
                         {getParentEvent(events, event)?.name ??
                           "Standalone event"}
                       </dd>
                     </div>
                   ) : null}
                   <div>
-                    <dt>Booth type</dt>
-                    <dd>{boothType || "No booth"}</dd>
+                    <dt className="text-muted text-xs">Booth type</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
+                      {boothType || "No booth"}
+                    </dd>
                   </div>
                   {usageType === "Ad-hoc" ? (
                     <div>
-                      <dt>Purpose</dt>
-                      <dd>
+                      <dt className="text-muted text-xs">Purpose</dt>
+                      <dd className="mt-1 text-sm font-medium break-words">
                         {adHocPurpose} ·{" "}
                         {adHocLocationType === "Store"
                           ? "Store"
@@ -599,52 +748,61 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                     </div>
                   ) : null}
                   <div>
-                    <dt>Borrowing period</dt>
-                    <dd>
+                    <dt className="text-muted text-xs">Borrowing period</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
                       {startDate} to {endDate} ·{" "}
                       {boothType ? `${boothUsage.usageDays} calendar days` : ""}
                     </dd>
                   </div>
                   <div>
-                    <dt>Full project address</dt>
-                    <dd>{destination}</dd>
+                    <dt className="text-muted text-xs">Full project address</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
+                      {destination}
+                    </dd>
                   </div>
                   <div>
-                    <dt>Requesting PIC</dt>
-                    <dd>
+                    <dt className="text-muted text-xs">Requesting PIC</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
                       {currentUser.name} · {currentUser.email}
                     </dd>
                   </div>
                   <div>
-                    <dt>Project-site PIC</dt>
-                    <dd>{siteContact || "Not provided"}</dd>
+                    <dt className="text-muted text-xs">Project-site PIC</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
+                      {siteContact || "Not provided"}
+                    </dd>
                   </div>
                   <div>
-                    <dt>Space dimensions</dt>
-                    <dd>
+                    <dt className="text-muted text-xs">Space dimensions</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
                       {spaceLength || "—"} × {spaceWidth || "—"} ×{" "}
                       {spaceHeight || "—"} m
                     </dd>
                   </div>
                   <div>
-                    <dt>Other event details</dt>
-                    <dd>{projectDetails || "None provided"}</dd>
+                    <dt className="text-muted text-xs">Other event details</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
+                      {projectDetails || "None provided"}
+                    </dd>
                   </div>
                 </dl>
                 {boothError ? <p role="alert">{boothError}</p> : null}
                 {windowValidation.error ? (
-                  <p className="request-validation-error" role="alert">
+                  <p
+                    className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                    role="alert"
+                  >
                     {windowValidation.error}
                   </p>
                 ) : null}
                 {wbsCodes.length ? (
-                  <div className="request-wbs-review">
+                  <div className="border-border grid gap-1 border-t pt-3 text-sm">
                     <strong>WBS References</strong>
                     <span>{wbsCodes.join(" · ")}</span>
                     <small>Manual references · not externally validated</small>
                   </div>
                 ) : null}
-                <div className="request-wbs-review">
+                <div className="border-border grid gap-1 border-t pt-3 text-sm">
                   <strong>Budget code</strong>
                   <span>{budgetCode || "Not provided"}</span>
                   <small>
@@ -652,7 +810,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                   </small>
                 </div>
                 {supportingDocuments.length ? (
-                  <div className="request-review-documents">
+                  <div className="border-border grid gap-2 border-t pt-4 text-sm">
                     <strong>Supporting documents</strong>
                     <ul>
                       {supportingDocuments.map((document) => (
@@ -670,69 +828,86 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                   </div>
                 ) : null}
               </Card>
-              <Card className="review-panel">
-                <p>Selected assets</p>
-                <h2>
+              <Card className="border-border gap-4 border p-4 sm:p-6">
+                <p className="text-muted text-xs font-medium">
+                  Selected assets
+                </p>
+                <h2 className="text-lg font-semibold">
                   {selected.length} {assetCountLabel} will be prepared
                 </h2>
-                <ul className="review-items">
+                <ul className="divide-border grid divide-y text-sm">
                   {readiness.map(({ asset, quantity }) => (
-                    <li key={asset.id}>
-                      <span>
-                        <strong>{asset.name}</strong>
+                    <li
+                      className="flex flex-col gap-2 py-3 sm:flex-row sm:justify-between"
+                      key={asset.id}
+                    >
+                      <span className="grid gap-1">
+                        <strong className="line-clamp-2" title={asset.name}>
+                          {asset.name}
+                        </strong>
                         <small>
-                          {quantity} x {asset.category}
+                          {quantity} {stockUnit(asset)} · {asset.category}
                         </small>
                       </span>
-                      <span className="review-return">
+                      <span className="text-muted flex items-center gap-2 text-xs">
                         <Undo2 size={14} /> Return to {asset.location}
                       </span>
                     </li>
                   ))}
                 </ul>
               </Card>
-              <Card className="review-panel">
-                <p>Fulfillment</p>
-                <h2>{fulfillmentMethod} from Asset operations</h2>
-                <dl>
+              <Card className="border-border gap-4 border p-4 sm:p-6">
+                <p className="text-muted text-xs font-medium">Fulfillment</p>
+                <h2 className="text-lg font-semibold">
+                  {fulfillmentMethod} from Asset operations
+                </h2>
+                <dl className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <dt>Usage</dt>
-                    <dd>
+                    <dt className="text-muted text-xs">Usage</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
                       {startDate} – {endDate}
                     </dd>
                   </div>
                   <div>
-                    <dt>Destination</dt>
-                    <dd>{destination}</dd>
+                    <dt className="text-muted text-xs">Destination</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
+                      {destination}
+                    </dd>
                   </div>
                   <div>
-                    <dt>Loading in</dt>
-                    <dd>
+                    <dt className="text-muted text-xs">Loading in</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
                       {fulfillmentDate} · {fulfillmentTime}
                     </dd>
                   </div>
                   <div>
-                    <dt>Loading out</dt>
-                    <dd>
+                    <dt className="text-muted text-xs">Loading out</dt>
+                    <dd className="mt-1 text-sm font-medium break-words">
                       {fulfillmentReturnDate} · {fulfillmentReturnTime}
                     </dd>
                   </div>
                 </dl>
                 {windowValidation.error ? (
-                  <p className="request-validation-error" role="alert">
+                  <p
+                    className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                    role="alert"
+                  >
                     {windowValidation.error}
                   </p>
                 ) : null}
                 {blocked.length ? (
-                  <p className="request-validation-error" role="alert">
+                  <p
+                    className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                    role="alert"
+                  >
                     Resolve the selected Asset reservation conflict before
                     submitting.
                   </p>
                 ) : null}
-                <h3>Return plan</h3>
-                <div className="review-return-groups">
+                <h3 className="text-sm font-semibold">Return plan</h3>
+                <div className="bg-surface-secondary grid gap-3 rounded-xl p-4 text-sm">
                   {returnPlan.map((group) => (
-                    <div key={group[0].asset.location}>
+                    <div className="grid gap-1" key={group[0].asset.location}>
                       <strong>{group[0].asset.location}</strong>
                       <span>
                         {group.map((item) => item.asset.name).join(", ")}
@@ -746,35 +921,31 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                 </div>
               </Card>
             </section>
-            <aside className="request-summary">
-              <Card>
-                <header>
-                  <p>Ready to submit</p>
-                  <h2>
-                    {selected.length} {assetCountLabel} selected
-                  </h2>
-                </header>
-                <div className="request-summary__context">
-                  <span>{destination}</span>
-                  <small>
-                    {fulfillmentDate} · {fulfillmentTime} →{" "}
-                    {fulfillmentReturnDate} · {fulfillmentReturnTime}
-                  </small>
-                </div>
-                <footer>
-                  {submitError || bookingError ? <p role="alert">{submitError || bookingError}</p> : null}
+            <aside className="hidden min-w-0 lg:sticky lg:top-24 lg:block">
+              <RequestSummary
+                title={`${selected.length} ${assetCountLabel} selected`}
+                project={resolvedProjectName}
+                dates={`${fulfillmentDate} · ${fulfillmentTime} → ${fulfillmentReturnDate} · ${fulfillmentReturnTime}`}
+                destination={destination}
+              >
+                <Card.Footer className="text-muted flex-col items-stretch gap-3 text-xs">
+                  {submitError || bookingError ? (
+                    <p role="alert">{submitError || bookingError}</p>
+                  ) : null}
                   <p>
                     After submission, this request goes to approval. Asset
                     availability will be rechecked.
                   </p>
                   <Button
-                    fullWidth
+                    className="w-full"
                     isDisabled={
                       !windowValidation.valid ||
                       Boolean(blocked.length) ||
                       Boolean(boothError) ||
-                      budgetCodeError
-                      || submitting || bookingLoading || Boolean(bookingError)
+                      budgetCodeError ||
+                      submitting ||
+                      bookingLoading ||
+                      Boolean(bookingError)
                     }
                     onPress={submit}
                     variant="primary"
@@ -782,26 +953,30 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                     {submitting ? "Submitting…" : "Submit request"}
                   </Button>
                   <Button
-                    fullWidth
+                    className="w-full"
                     onPress={() => setStep(1)}
                     variant="secondary"
                   >
                     Edit request
                   </Button>
-                </footer>
-              </Card>
+                </Card.Footer>
+              </RequestSummary>
             </aside>
           </div>
           <div className="request-review__mobile-submit">
-            {submitError || bookingError ? <p role="alert">{submitError || bookingError}</p> : null}
+            {submitError || bookingError ? (
+              <p role="alert">{submitError || bookingError}</p>
+            ) : null}
             <Button
               isDisabled={
                 (!selected.length && !canContinueWithoutAssets) ||
                 Boolean(blocked.length) ||
                 Boolean(boothError) ||
                 !hasRequiredBooth ||
-                budgetCodeError
-                || submitting || bookingLoading || Boolean(bookingError)
+                budgetCodeError ||
+                submitting ||
+                bookingLoading ||
+                Boolean(bookingError)
               }
               onPress={submit}
               variant="primary"
@@ -813,93 +988,116 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
       </AppShell>
     );
 
+  const selectionActions = (
+    <div className="grid w-full grid-cols-1 gap-2">
+      <Button
+        className="w-full"
+        isDisabled={
+          Boolean(boothError) ||
+          budgetCodeError ||
+          (!selected.length && !canContinueWithoutAssets) ||
+          !hasRequiredBooth ||
+          Boolean(blocked.length)
+        }
+        onPress={() => {
+          setIsSelectionOpen(false);
+          setStep(3);
+        }}
+        variant="primary"
+      >
+        Continue to fulfillment →
+      </Button>
+      <Button
+        className="w-full"
+        onPress={() => {
+          setIsSelectionOpen(false);
+          setStep(1);
+        }}
+        variant="secondary"
+      >
+        ← Back
+      </Button>
+    </div>
+  );
+
   return (
-    <AppShell pageLabel="New request">
-      <Sheet onOpenChange={setIsSelectionOpen} open={isSelectionOpen}>
-        <div className="request-workspace">
-          <header className="request-workspace__header">
+    <AppShell pageLabel="New request" showHeaderSearch={false}>
+      <>
+        <div className="mx-auto max-w-6xl space-y-6 pb-32 lg:pb-8">
+          <header className="flex items-start justify-between gap-4">
             <div>
-              <Link href="/requests">Requests</Link>
-              <h1>Build a request</h1>
-              <p>Plan the use, choose assets, then confirm how they move.</p>
+              <Link
+                className="text-accent text-xs font-medium"
+                href="/requests"
+              >
+                Requests / New request
+              </Link>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight">
+                Build a request
+              </h1>
+              <p className="text-muted mt-2 max-w-xl text-sm">
+                Plan the use, choose assets, then confirm how they move.
+              </p>
             </div>
             <Chip color="accent" variant="soft">
               Step {step} of 4
             </Chip>
           </header>
-          <nav className="request-stepper" aria-label="Request steps">
-            {[
-              "Usage & dates",
-              "Select assets",
-              "Fulfillment",
-              "Review & submit",
-            ].map((label, index) => (
-              <span
-                aria-current={step === index + 1 ? "step" : undefined}
-                className={
-                  step === index + 1
-                    ? "is-active"
-                    : step > index + 1
-                      ? "is-complete"
-                      : ""
-                }
-                key={label}
-              >
-                <i>{index + 1}</i>
-                {label}
-              </span>
-            ))}
-          </nav>
-          {submitError ? <p className="request-validation-error" role="alert">{submitError}</p> : null}
-          <div className="request-workspace__grid">
-            <section className="request-workspace__canvas">
+          <RequestSteps step={step} />
+          {submitError ? (
+            <p
+              className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+              role="alert"
+            >
+              {submitError}
+            </p>
+          ) : null}
+          <div className="grid items-start gap-6 lg:grid-cols-3">
+            <section
+              className={`grid min-w-0 gap-6 lg:col-span-2 ${step === 2 ? "pb-64 lg:pb-0" : ""}`}
+            >
               {step === 1 ? (
                 <>
-                  <Card className="request-context-card">
-                    <header>
+                  <Card className="border-border gap-5 border p-4 sm:p-6">
+                    <Card.Header className="flex-row items-start justify-between gap-3">
                       <div>
-                        <p>1. Usage context</p>
-                        <h2>Where will these assets be used?</h2>
+                        <p className="text-muted text-xs font-medium">
+                          1. Usage context
+                        </p>
+                        <Card.Title>
+                          Where will these assets be used?
+                        </Card.Title>
                       </div>
                       <CalendarDays size={19} />
-                    </header>
-                    <p className="request-context-card__helper">
-                      Choose an event or registered destination. Availability is
-                      checked against the usage dates.
+                    </Card.Header>
+                    <p className="text-muted text-sm">
+                      Choose a registered event or an ad-hoc use. Vendor
+                      workshops are destinations under Ad-hoc. For relocation
+                      without a usage period, use Transfer.
                     </p>
-                    <div className="request-usage-options">
-                      {(
-                        [
-                          "Registered event",
-                          "Vendor workshop",
-                          "Ad-hoc",
-                        ] as const
-                      ).map((option) => (
-                        <button
-                          aria-pressed={usageType === option}
-                          className={usageType === option ? "is-selected" : ""}
-                          key={option}
-                          onClick={() => selectUsageType(option)}
-                          type="button"
-                        >
-                          {option === "Ad-hoc" ? "Ad-hoc Event" : option}
-                        </button>
-                      ))}
+                    <div className="flex flex-wrap gap-2">
+                      {(["Registered event", "Ad-hoc"] as const).map(
+                        (option) => (
+                          <Button
+                            aria-pressed={usageType === option}
+                            className="w-full sm:w-auto"
+                            variant={
+                              usageType === option ? "primary" : "secondary"
+                            }
+                            key={option}
+                            onPress={() => selectUsageType(option)}
+                            type="button"
+                          >
+                            {option === "Ad-hoc" ? "Ad-hoc Event" : option}
+                          </Button>
+                        ),
+                      )}
                     </div>
-                    <div className="request-context-card__fields">
-                      <label>
-                        Project name
-                        <Input
-                          onChange={(input) =>
-                            setProjectName(input.currentTarget.value)
-                          }
-                          placeholder="Name this booth project"
-                          value={projectName}
-                        />
-                      </label>
+                    <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
                       {usageType === "Registered event" ? (
                         <>
                           <HeroSelect
+                            variant="secondary"
                             label="Brand"
                             onChange={(value) =>
                               selectBrand(value as (typeof brands)[number])
@@ -911,6 +1109,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                             value={brand}
                           />
                           <HeroSelect
+                            variant="secondary"
                             label="Event / activation"
                             onChange={selectEvent}
                             options={brandEvents.map((item) => ({
@@ -922,11 +1121,15 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                         </>
                       ) : usageType === "Vendor workshop" ? (
                         <HeroSelect
+                          variant="secondary"
                           label="Registered vendor workshop"
+                          isDisabled={vendorLoading}
                           onChange={selectLocation}
                           options={registeredLocations
                             .filter(
-                              (location) => location.type === "Vendor workshop",
+                              (location) =>
+                                location.type === "Vendor workshop" ||
+                                location.type === "Vendor warehouse",
                             )
                             .map((location) => ({
                               label: `${location.vendorName} · ${location.name} · ${location.city}`,
@@ -937,6 +1140,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                       ) : (
                         <>
                           <HeroSelect
+                            variant="secondary"
                             label="Brand"
                             onChange={(value) =>
                               selectBrand(value as (typeof brands)[number])
@@ -948,6 +1152,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                             value={brand}
                           />
                           <HeroSelect
+                            variant="secondary"
                             label="Ad-hoc purpose"
                             onChange={setAdHocPurpose}
                             options={[
@@ -961,6 +1166,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                             value={adHocPurpose}
                           />
                           <HeroSelect
+                            variant="secondary"
                             label="Location type"
                             onChange={(value) => {
                               const next = value as "Store" | "Outside Store";
@@ -980,6 +1186,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                           />
                           {adHocLocationType === "Store" ? (
                             <HeroSelect
+                              variant="secondary"
                               label="Registered Store"
                               onChange={selectLocation}
                               options={storeLocations
@@ -995,19 +1202,37 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                           ) : (
                             <>
                               <HeroSelect
+                                variant="secondary"
                                 label="Registered destination"
+                                isDisabled={vendorLoading}
                                 onChange={selectLocation}
                                 options={registeredLocations.map(
                                   (location) => ({
-                                    label: `${location.name} · ${location.city}`,
+                                    label: location.vendorId
+                                      ? location.name
+                                      : `${location.name} · ${location.city}`,
                                     value: location.id,
                                   }),
                                 )}
                                 value={locationId}
                               />
-                              <label>
+                              {vendorLoading ? (
+                                <p role="status" className="text-muted text-xs">
+                                  Loading vendor warehouses…
+                                </p>
+                              ) : vendorError ? (
+                                <p
+                                  role="alert"
+                                  className="text-danger-soft-foreground text-xs"
+                                >
+                                  {vendorError}
+                                </p>
+                              ) : null}
+                              <label className="grid min-w-0 gap-2 text-sm font-medium">
                                 New place (optional)
                                 <Input
+                                  variant="secondary"
+                                  className="w-full min-w-0"
                                   onChange={(input) => {
                                     const value = input.currentTarget.value;
                                     setAdHocPlace(value);
@@ -1021,19 +1246,37 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                           )}
                         </>
                       )}
-                      <label>
+                      <label className="grid min-w-0 gap-2 text-sm font-medium">
+                        Project name
+                        <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
+                          onChange={(input) =>
+                            setProjectName(input.currentTarget.value)
+                          }
+                          placeholder="Name this booth project"
+                          value={resolvedProjectName}
+                          readOnly={usageType === "Registered event"}
+                        />
+                      </label>
+                      <label className="grid min-w-0 gap-2 text-sm font-medium">
                         Full project address
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setProjectAddress(input.currentTarget.value)
                           }
                           placeholder="Street, building / venue, city"
-                          value={projectAddress}
+                          value={resolvedProjectAddress}
+                          readOnly={usageType === "Registered event"}
                         />
                       </label>
-                      <label>
+                      <label className="grid min-w-0 gap-2 text-sm font-medium">
                         Borrowing period starts
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setStartDate(input.currentTarget.value)
                           }
@@ -1041,9 +1284,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                           value={startDate}
                         />
                       </label>
-                      <label>
+                      <label className="grid min-w-0 gap-2 text-sm font-medium">
                         Borrowing period ends
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setEndDate(input.currentTarget.value)
                           }
@@ -1052,31 +1297,38 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                         />
                       </label>
                     </div>
-                    <div className="request-context-card__event">
+                    <div className="bg-surface-secondary flex items-start gap-3 rounded-xl p-4 text-sm">
                       <MapPin size={16} />
-                      <span>
+                      <span className="grid gap-1">
                         <strong>{destination}</strong>
-                        <small>
-                          PIC defaults to your account ·{" "}
-                          {currentUser.name}
+                        <small className="text-muted">
+                          PIC defaults to your account · {currentUser.name}
                         </small>
                       </span>
                     </div>
                     <section
-                      className="request-wbs-entry"
+                      className="border-border space-y-3 border-t pt-5"
                       aria-labelledby="request-wbs-title"
                     >
                       <div>
-                        <h3 id="request-wbs-title">
-                          WBS References <span>Optional</span>
+                        <h3
+                          className="flex items-center gap-2 text-sm font-semibold"
+                          id="request-wbs-title"
+                        >
+                          WBS References{" "}
+                          <span className="text-muted text-xs font-normal">
+                            Optional
+                          </span>
                         </h3>
-                        <p>
+                        <p className="text-muted mt-1 text-xs">
                           Add manual references if available. Example: ABC12345.
                           AssetHub does not verify WBS codes externally.
                         </p>
                       </div>
-                      <div className="request-wbs-entry__input">
+                      <div className="flex flex-col items-start gap-2 sm:flex-row">
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           aria-label="WBS code (optional)"
                           onChange={(event) => {
                             setWbsInput(event.currentTarget.value);
@@ -1124,13 +1376,19 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                       ) : null}
                       {!wbsCodes.length && !wbsError ? (
                         <small>
-                          Optional · WBS ownership and required contexts are not
-                          yet defined.
+                          Optional · Add one or more references if available.
                         </small>
                       ) : null}
-                      <label className="request-budget-code">
-                        Budget code <span>Required</span>
+                      <label className="border-border grid gap-2 border-t pt-4 text-sm font-medium">
+                        <span className="flex items-center gap-2">
+                          Budget code{" "}
+                          <span className="text-danger text-xs font-normal">
+                            Required
+                          </span>
+                        </span>
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           aria-label="Budget code (required)"
                           aria-required="true"
                           onChange={(input) =>
@@ -1146,21 +1404,25 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                       </label>
                     </section>
                   </Card>
-                  <Card className="request-project-details">
-                    <header>
+                  <Card className="border-border gap-5 border p-4 sm:p-6">
+                    <Card.Header className="flex-row items-start justify-between gap-3">
                       <div>
-                        <p>Project information</p>
-                        <h2>Booth and venue details</h2>
+                        <p className="text-muted text-xs font-medium">
+                          Project information
+                        </p>
+                        <Card.Title>Booth and venue details</Card.Title>
                       </div>
-                    </header>
-                    <p className="request-context-card__helper">
+                    </Card.Header>
+                    <p className="text-muted text-sm">
                       Add the on-site contact, space dimensions, and any layout
                       notes that help the operations team prepare.
                     </p>
-                    <div className="request-context-card__fields">
-                      <label className="request-project-details__wide">
+                    <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+                      <label className="col-span-full grid min-w-0 gap-2 text-sm font-medium">
                         Project-site PIC (name and contact)
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setSiteContact(input.currentTarget.value)
                           }
@@ -1170,9 +1432,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                       </label>
                       <fieldset className="request-space-dimensions">
                         <legend>Space area dimensions (metres)</legend>
-                        <label>
+                        <label className="grid min-w-0 gap-2 text-sm font-medium">
                           Length
                           <Input
+                            variant="secondary"
+                            className="w-full min-w-0"
                             min="0"
                             onChange={(input) =>
                               setSpaceLength(input.currentTarget.value)
@@ -1183,9 +1447,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                             value={spaceLength}
                           />
                         </label>
-                        <label>
+                        <label className="grid min-w-0 gap-2 text-sm font-medium">
                           Width
                           <Input
+                            variant="secondary"
+                            className="w-full min-w-0"
                             min="0"
                             onChange={(input) =>
                               setSpaceWidth(input.currentTarget.value)
@@ -1196,9 +1462,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                             value={spaceWidth}
                           />
                         </label>
-                        <label>
+                        <label className="grid min-w-0 gap-2 text-sm font-medium">
                           Height
                           <Input
+                            variant="secondary"
+                            className="w-full min-w-0"
                             min="0"
                             onChange={(input) =>
                               setSpaceHeight(input.currentTarget.value)
@@ -1210,9 +1478,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                           />
                         </label>
                       </fieldset>
-                      <label className="request-project-details__wide">
+                      <label className="col-span-full grid min-w-0 gap-2 text-sm font-medium">
                         Other event / venue details
                         <TextArea
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setProjectDetails(input.target.value)
                           }
@@ -1222,29 +1492,38 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                       </label>
                     </div>
                   </Card>
-                  <Card className="request-project-documents">
-                    <header>
+                  <Card className="border-border gap-5 border p-4 sm:p-6">
+                    <Card.Header className="flex-row items-start justify-between gap-3">
                       <div>
-                        <p>Supporting documents</p>
-                        <h2>Venue layout and loading letters</h2>
+                        <p className="text-muted text-xs font-medium">
+                          Supporting documents
+                        </p>
+                        <Card.Title>
+                          Venue layout and loading letters
+                        </Card.Title>
                       </div>
-                    </header>
-                    <p className="request-context-card__helper">
-                      Optional · PDF or image, up to 5 MB each and 5 files per
-                      request. Prototype files stay in this browser session and
-                      are not uploaded to permanent storage.
+                    </Card.Header>
+                    <p className="text-muted text-sm">
+                      Venue layout and loading-in letter · PDF or image, up to 5
+                      MB each and 5 files. Loading-out letters are added when
+                      starting a return. Files stay in this browser session.
                     </p>
-                    <div className="request-document-upload-grid">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {(
                         [
                           "Floor plan / venue layout",
                           "Loading-in letter",
-                          "Loading-out letter",
                         ] as RequestDocumentCategory[]
                       ).map((category) => (
-                        <label key={category}>
-                          {category}
+                        <label
+                          className="border-border bg-surface-secondary flex min-w-0 flex-col gap-2 rounded-xl border border-dashed p-4 text-xs"
+                          key={category}
+                        >
+                          <FileUp size={22} aria-hidden="true" />
+                          <strong>{category}</strong>
+                          <small>Choose a file · PDF or image</small>
                           <input
+                            className="file:bg-surface file:text-foreground w-full min-w-0 text-xs file:mr-2 file:rounded-lg file:border-0 file:p-2"
                             accept="application/pdf,image/*"
                             aria-label={`Upload ${category}`}
                             disabled={supportingDocuments.length >= 5}
@@ -1262,12 +1541,15 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                       ))}
                     </div>
                     {documentError ? (
-                      <p className="request-validation-error" role="alert">
+                      <p
+                        className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                        role="alert"
+                      >
                         {documentError}
                       </p>
                     ) : null}
                     {supportingDocuments.length ? (
-                      <ul className="request-document-list">
+                      <ul className="grid gap-3 text-xs">
                         {supportingDocuments.map((document) => (
                           <li key={document.id}>
                             <span>
@@ -1297,11 +1579,14 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                     ) : null}
                   </Card>
                   {contextError ? (
-                    <p className="request-validation-error" role="alert">
+                    <p
+                      className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                      role="alert"
+                    >
                       {contextError}
                     </p>
                   ) : null}
-                  <div className="request-step-actions">
+                  <div className="border-border flex items-center justify-between gap-3 border-t pt-4">
                     <span>Step 1 of 4</span>
                     <Button
                       isDisabled={Boolean(contextError) || budgetCodeError}
@@ -1315,33 +1600,37 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
               ) : null}
               {step === 2 ? (
                 <>
-                  <section className="request-inventory">
-                    <header>
+                  <section className="grid min-w-0 gap-4">
+                    <header className="flex flex-col items-start gap-4 xl:flex-row xl:justify-between">
                       <div>
-                        <p>2. Select assets</p>
-                        <h2>Pick the assets you need</h2>
-                        <span>
+                        <p className="text-muted text-xs">2. Select assets</p>
+                        <h2 className="text-lg font-semibold">
+                          Pick the assets you need
+                        </h2>
+                        <span className="text-muted mt-1 block text-sm">
                           Filter the list, then use + to add each available
                           asset.
                         </span>
                       </div>
-                      <div className="request-inventory__search">
-                        <Search size={16} />
-                        <Input
-                          aria-label="Search assets"
-                          onChange={(input) =>
-                            setQuery(input.currentTarget.value)
-                          }
-                          placeholder="Search assets"
-                          value={query}
-                        />
-                      </div>
+                      <SearchField
+                        aria-label="Search assets"
+                        className="w-full max-w-md min-w-0"
+                        onChange={setQuery}
+                        value={query}
+                      >
+                        <SearchField.Group>
+                          <SearchField.SearchIcon />
+                          <SearchField.Input placeholder="Search assets" />
+                          <SearchField.ClearButton aria-label="Clear asset search" />
+                        </SearchField.Group>
+                      </SearchField>
                     </header>
                     <div
-                      className="request-inventory__filters"
+                      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
                       aria-label="Asset filters"
                     >
                       <HeroSelect
+                        variant="secondary"
                         label="Booth requirement"
                         onChange={(value) =>
                           setBoothType(
@@ -1358,6 +1647,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                         value={boothType || "No booth"}
                       />
                       <HeroSelect
+                        variant="secondary"
                         label="Brand"
                         onChange={setAssetBrandFilter}
                         options={[
@@ -1370,6 +1660,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                         value={assetBrandFilter}
                       />
                       <HeroSelect
+                        variant="secondary"
                         label="Category"
                         onChange={setAssetCategoryFilter}
                         options={[
@@ -1382,17 +1673,20 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                         value={assetCategoryFilter}
                       />
                     </div>
-                    <p className="request-picker-filter-help">
+                    <p className="text-muted text-xs">
                       Regular Booth requires a Booth asset. Custom Booth is
                       recorded as a request requirement only.
                     </p>
                     {boothError ? (
-                      <p className="request-validation-error" role="alert">
+                      <p
+                        className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                        role="alert"
+                      >
                         {boothError}
                       </p>
                     ) : null}
-                    <div className="request-inventory__grid">
-                      {matchingAssets.map((asset) => {
+                    <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4">
+                      {matchingAssets.slice(0, pickerCount).map((asset) => {
                         const item = selected.find(
                           (candidate) => candidate.asset.id === asset.id,
                         );
@@ -1409,50 +1703,148 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                             className={
                               item
                                 ? eligibility.eligible
-                                  ? "request-asset is-selected"
-                                  : "request-asset is-selected is-conflicted"
-                                : "request-asset"
+                                  ? "request-asset is-selected border-accent flex h-full flex-col gap-0 overflow-hidden border p-0"
+                                  : "request-asset is-selected is-conflicted border-danger flex h-full flex-col gap-0 overflow-hidden border p-0"
+                                : "request-asset border-border flex h-full flex-col gap-0 overflow-hidden border p-0"
                             }
                             key={asset.id}
                           >
-                            <AssetArtwork asset={asset} variant="tile" />
-                            <div>
-                              <div className="request-asset__top">
+                            <AssetArtwork
+                              asset={asset}
+                              variant="tile"
+                              aspectRatio="16:9"
+                            />
+                            <Card.Content className="flex flex-1 flex-col gap-3 p-3 sm:p-4">
+                              <div className="text-muted flex flex-wrap items-center justify-between gap-2 text-xs">
                                 <span>{asset.brand}</span>
-                                <AssetStatus status={asset.availability} />
+                                {asset.availability === "available" ? (
+                                  <Chip
+                                    color="default"
+                                    variant="tertiary"
+                                    size="sm"
+                                    className="border-border border"
+                                  >
+                                    Available
+                                  </Chip>
+                                ) : (
+                                  <AssetStatus status={asset.availability} />
+                                )}
                               </div>
-                              <h3>{asset.name}</h3>
-                              <small>
-                                {asset.location} · {asset.condition}
-                              </small>
-                              <p>
+                              <Card.Title
+                                className="line-clamp-2 min-h-12 text-base break-words"
+                                title={asset.name}
+                              >
+                                {asset.name}
+                              </Card.Title>
+                              <div className="text-muted flex flex-wrap items-start gap-2 text-xs">
+                                <span
+                                  className="line-clamp-2 min-w-0 flex-1"
+                                  title={asset.location}
+                                >
+                                  {asset.location}
+                                </span>
+                                <Chip
+                                  size="sm"
+                                  variant="soft"
+                                  color={
+                                    asset.condition === "Good"
+                                      ? "success"
+                                      : asset.condition === "Fair"
+                                        ? "warning"
+                                        : "danger"
+                                  }
+                                >
+                                  {asset.condition}
+                                </Chip>
+                              </div>
+                              <p
+                                className={`line-clamp-3 text-xs ${eligibility.eligible ? "text-success-soft-foreground" : "text-muted"}`}
+                                title={eligibility.warnings.join(" · ")}
+                              >
                                 {eligibility.eligible
                                   ? "Ready for selected dates"
                                   : eligibility.warnings[0]}
                               </p>
-                              <div className="request-asset__actions">
+                              {item &&
+                              borrowingUnits(asset).filter(
+                                (unit) =>
+                                  unit === stockUnit(asset) ||
+                                  (asset.availableQuantity ?? 1) >=
+                                    asset.unitPolicy!.unitsPerPackage!,
+                              ).length > 1 ? (
+                                <div className="grid gap-2">
+                                  <HeroSelect
+                                    label={`Borrowing unit for ${asset.name}`}
+                                    value={item.borrowUnit ?? stockUnit(asset)}
+                                    options={borrowingUnits(asset)
+                                      .filter(
+                                        (unit) =>
+                                          unit === stockUnit(asset) ||
+                                          (asset.availableQuantity ?? 1) >=
+                                            asset.unitPolicy!.unitsPerPackage!,
+                                      )
+                                      .map((unit) => ({
+                                        label:
+                                          unit === asset.unitPolicy?.packageUnit
+                                            ? `${unit} (${asset.unitPolicy.unitsPerPackage} ${stockUnit(asset)})`
+                                            : unit,
+                                        value: unit,
+                                      }))}
+                                    onChange={(unit) =>
+                                      setSelected((current) =>
+                                        current.map((selectedItem) =>
+                                          selectedItem.asset.id !== asset.id
+                                            ? selectedItem
+                                            : {
+                                                ...selectedItem,
+                                                borrowUnit: unit as AssetUnit,
+                                                quantity:
+                                                  unit ===
+                                                  asset.unitPolicy?.packageUnit
+                                                    ? asset.unitPolicy
+                                                        .unitsPerPackage!
+                                                    : 1,
+                                              },
+                                        ),
+                                      )
+                                    }
+                                  />
+                                  <p>
+                                    {item.quantity} {stockUnit(asset)} allocated
+                                  </p>
+                                </div>
+                              ) : null}
+                              <div className="border-border text-muted mt-auto flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs">
                                 {item && asset.supportsQuantity ? (
-                                  <span>
+                                  <span className="flex items-center gap-2">
                                     <Button
                                       aria-label={`Remove one ${asset.name}`}
-                                      isIconOnly
-                                      onClick={(input) => {
-                                        input.stopPropagation();
+
+                                      onPress={() => {
                                         changeQuantity(asset.id, -1);
                                       }}
+                                      isIconOnly
                                       size="sm"
                                       variant="primary"
                                     >
                                       <Minus size={13} />
                                     </Button>
-                                    {item.quantity}
+                                    <span>
+                                      {item.quantity /
+                                        (item.borrowUnit ===
+                                        asset.unitPolicy?.packageUnit
+                                          ? (asset.unitPolicy
+                                              ?.unitsPerPackage ?? 1)
+                                          : 1)}{" "}
+                                      {item.borrowUnit ?? stockUnit(asset)}
+                                    </span>
                                     <Button
                                       aria-label={`Add one ${asset.name}`}
-                                      isIconOnly
-                                      onClick={(input) => {
-                                        input.stopPropagation();
+
+                                      onPress={() => {
                                         changeQuantity(asset.id, 1);
                                       }}
+                                      isIconOnly
                                       size="sm"
                                       variant="primary"
                                     >
@@ -1461,7 +1853,9 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                                   </span>
                                 ) : (
                                   <span>
-                                    {item ? "In request" : "Select asset"}
+                                    {item
+                                      ? `In request · 1 ${stockUnit(asset)}`
+                                      : "Select asset"}
                                   </span>
                                 )}
                                 <Button
@@ -1472,8 +1866,9 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                                   }
                                   className="request-asset__toggle"
                                   isDisabled={!eligibility.eligible && !item}
-                                  isIconOnly
+
                                   onPress={() => toggleAsset(asset)}
+                                  isIconOnly
                                   size="sm"
                                   variant="primary"
                                 >
@@ -1484,14 +1879,15 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                                   )}
                                 </Button>
                               </div>
-                            </div>
+                            </Card.Content>
                           </Card>
                         );
                       })}
                     </div>
+                    {matchingAssets.length > pickerCount ? <Button variant="secondary" onPress={() => setPickerPaging({criteria:pickerCriteria,count:pickerCount+24})}>Show more assets ({pickerCount} of {matchingAssets.length})</Button> : null}
                   </section>
                   {boothType === "Custom Booth" ? (
-                    <Card className="request-custom-booth-note">
+                    <Card className="border-accent bg-accent-soft gap-2 border p-4 text-sm">
                       <strong>Custom Booth requirement</strong>
                       <p>
                         No existing Asset is required for this booth type. Add
@@ -1500,112 +1896,116 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                     </Card>
                   ) : null}
                   {boothType === "Regular Booth" && !hasRequiredBooth ? (
-                    <p className="request-validation-error" role="alert">
+                    <p
+                      className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                      role="alert"
+                    >
                       Select at least one available Booth asset for a Regular
                       Booth request.
                     </p>
                   ) : null}
                   {boothError ? (
-                    <p className="request-validation-error" role="alert">
+                    <p
+                      className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                      role="alert"
+                    >
                       {boothError}
                     </p>
                   ) : null}
-                  <div className="request-step-actions">
-                    <Button onPress={() => setStep(1)} variant="secondary">
-                      ← Back
-                    </Button>
-                    <Button
-                      isDisabled={
-                        Boolean(boothError) ||
-                        budgetCodeError ||
-                        (!selected.length && !canContinueWithoutAssets) ||
-                        !hasRequiredBooth ||
-                        Boolean(blocked.length)
-                      }
-                      onPress={() => setStep(3)}
-                      variant="primary"
-                    >
-                      Continue to fulfillment →
-                    </Button>
-                  </div>
                 </>
               ) : null}
               {step === 3 ? (
-                <Card className="request-context-card fulfillment-step">
-                  <header>
+                <Card className="border-border gap-5 border p-4 sm:p-6">
+                  <Card.Header className="flex-row items-start justify-between gap-3">
                     <div>
-                      <p>3. Fulfillment</p>
-                      <h2>How should the assets get there?</h2>
+                      <p className="text-muted text-xs font-medium">
+                        3. Fulfillment
+                      </p>
+                      <Card.Title>How should the assets get there?</Card.Title>
                     </div>
                     <MapPin size={19} />
-                  </header>
-                  <p className="request-context-card__helper">
+                  </Card.Header>
+                  <p className="text-muted text-sm">
                     Choose a delivery or pickup plan. Adjust pickup and return
                     timing before submission. Usage dates remain separate from
                     this operational reservation window.
                   </p>
                   {windowValidation.error ? (
-                    <p className="request-validation-error" role="alert">
+                    <p
+                      className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                      role="alert"
+                    >
                       {windowValidation.error}
                     </p>
                   ) : null}
                   {blocked.length ? (
-                    <p className="request-validation-error" role="alert">
+                    <p
+                      className="bg-danger-soft text-danger-soft-foreground rounded-xl p-3 text-sm"
+                      role="alert"
+                    >
                       A selected Asset now conflicts with another operational
                       reservation. Go back to Select Assets to remove it.
                     </p>
                   ) : null}
-                  <div className="fulfillment-method-options">
+                  <RadioGroup
+                    aria-label="Fulfillment method"
+                    value={fulfillmentMethod}
+                    onChange={(value) =>
+                      setFulfillmentMethod(value as "Delivery" | "Pickup")
+                    }
+                    className="grid gap-3 sm:grid-cols-2"
+                  >
                     {(["Delivery", "Pickup"] as const).map((method) => (
-                      <button
-                        aria-pressed={fulfillmentMethod === method}
-                        className={
-                          fulfillmentMethod === method
-                            ? "fulfillment-method-choice is-selected"
-                            : "fulfillment-method-choice"
-                        }
+                      <Radio
                         key={method}
-                        onClick={() => setFulfillmentMethod(method)}
-                        type="button"
+                        value={method}
+                        className={`rounded-xl border p-4 ${fulfillmentMethod === method ? "border-accent bg-accent-soft" : "border-border"}`}
                       >
-                        <strong>{method}</strong>
-                        <small>
+                        <Radio.Content>
+                          <Radio.Control>
+                            <Radio.Indicator />
+                          </Radio.Control>
+                          {method}
+                        </Radio.Content>
+                        <Description className="mt-2 text-xs">
                           {method === "Delivery"
                             ? "We arrange transport to the destination."
                             : "Someone collects the assets from the source."}
-                        </small>
-                      </button>
+                        </Description>
+                      </Radio>
                     ))}
-                  </div>
-                  <div className="fulfillment-group__route">
-                    <div className="fulfillment-place">
+                  </RadioGroup>
+                  <div className="bg-surface-secondary grid gap-4 rounded-xl p-4 sm:grid-cols-2">
+                    <div className="flex items-start gap-3 text-sm">
                       <MapPin size={17} />
-                      <div>
-                        <span>From</span>
+                      <div className="grid gap-1">
+                        <span className="text-muted text-xs">From</span>
                         <strong>Asset operations</strong>
                       </div>
                     </div>
-                    <div className="fulfillment-place">
+                    <div className="flex items-start gap-3 text-sm">
                       <MapPin size={17} />
-                      <div>
-                        <span>Destination</span>
+                      <div className="grid gap-1">
+                        <span className="text-muted text-xs">Destination</span>
                         <strong>{destination}</strong>
                       </div>
                     </div>
                   </div>
-                  <div className="fulfillment-items">
+                  <div className="border-border space-y-2 border-t pt-4 text-sm">
                     <strong>Items · {selected.length}</strong>
                     <ul>
                       {selected.map(({ asset, quantity }) => (
                         <li key={asset.id}>
                           {asset.name}
-                          {asset.supportsQuantity ? ` × ${quantity}` : ""}
+                          {asset.supportsQuantity
+                            ? ` × ${quantity} ${stockUnit(asset)}`
+                            : ""}
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <div className="fulfillment-edit-card">
-                    <div>
+                  <div className="border-border flex items-start justify-between gap-3 rounded-xl border p-4 text-sm">
+                    <div className="grid gap-1">
                       <strong>
                         {fulfillmentMethod} · {fulfillmentDate} ·{" "}
                         {fulfillmentTime}
@@ -1625,10 +2025,12 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                     </Button>
                   </div>
                   {editingFulfillment ? (
-                    <div className="request-context-card__fields fulfillment-details-editor">
-                      <label>
+                    <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+                      <label className="grid min-w-0 gap-2 text-sm font-medium">
                         Loading-in date
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setFulfillmentDate(input.currentTarget.value)
                           }
@@ -1636,9 +2038,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                           value={fulfillmentDate}
                         />
                       </label>
-                      <label>
+                      <label className="grid min-w-0 gap-2 text-sm font-medium">
                         Loading-in time
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setFulfillmentTime(input.currentTarget.value)
                           }
@@ -1646,9 +2050,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                           value={fulfillmentTime}
                         />
                       </label>
-                      <label>
+                      <label className="grid min-w-0 gap-2 text-sm font-medium">
                         Loading-out date
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setFulfillmentReturnDate(input.currentTarget.value)
                           }
@@ -1656,9 +2062,11 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                           value={fulfillmentReturnDate}
                         />
                       </label>
-                      <label>
+                      <label className="grid min-w-0 gap-2 text-sm font-medium">
                         Loading-out time
                         <Input
+                          variant="secondary"
+                          className="w-full min-w-0"
                           onChange={(input) =>
                             setFulfillmentReturnTime(input.currentTarget.value)
                           }
@@ -1668,7 +2076,7 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                       </label>
                     </div>
                   ) : null}
-                  <div className="request-step-actions">
+                  <div className="border-border flex items-center justify-between gap-3 border-t pt-4">
                     <Button onPress={() => setStep(2)} variant="secondary">
                       ← Back
                     </Button>
@@ -1687,31 +2095,23 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                 </Card>
               ) : null}
             </section>
-            <aside className="request-summary">
-              <Card>
-                <header>
-                  <p>Request summary</p>
-                  <h2>
-                    {selected.length} {assetCountLabel} selected
-                  </h2>
-                </header>
-                <div className="request-summary__context">
-                  <span>{projectName || "Name this project"}</span>
-                  <small>
-                    {startDate} to {endDate}
-                    {boothType
-                      ? ` · ${boothType} · ${boothUsage.usageDays} days`
-                      : ""}
-                  </small>
-                </div>
+            <aside className="hidden min-w-0 lg:sticky lg:top-24 lg:block">
+              <RequestSummary
+                title={`${selected.length} ${assetCountLabel} selected`}
+                project={resolvedProjectName || "Name this project"}
+                dates={`${startDate} to ${endDate}${boothType ? ` · ${boothType} · ${boothUsage.usageDays} days` : ""}`}
+                destination={destination}
+              >
                 {boothError || contextError ? (
                   <p role="alert">{boothError || contextError}</p>
                 ) : null}
-                <RequestSelectionList
-                  items={readiness}
-                  onRemove={removeAsset}
-                />
-                <footer>
+                <div className="max-h-[40dvh] overflow-y-auto">
+                  <RequestSelectionList
+                    items={readiness}
+                    onRemove={removeAsset}
+                  />
+                </div>
+                <Card.Footer className="text-muted flex-col items-stretch gap-3 text-xs">
                   {blocked.length ? (
                     <p>
                       {blocked.length} selected{" "}
@@ -1723,111 +2123,85 @@ export function RequestFlowScreen({ items, revisionRequest, initialWbsCodes = []
                       Selected items stay visible while you build the request.
                     </p>
                   )}
-                  <Button
-                    fullWidth
-                    isDisabled={
-                      Boolean(boothError) ||
-                      Boolean(contextError) ||
-                      (step === 3 && !windowValidation.valid) ||
-                      (step === 3 && Boolean(blocked.length)) ||
-                      budgetCodeError ||
-                      (!selected.length && !canContinueWithoutAssets) ||
-                      Boolean(blocked.length) ||
-                      !hasRequiredBooth
-                    }
-                    onPress={() => setStep(step === 1 ? 2 : step === 2 ? 3 : 4)}
-                    variant="primary"
-                  >
-                    {step === 1
-                      ? "Select assets"
-                      : step === 2
-                        ? "Continue"
-                        : "Review request"}
-                  </Button>
-                </footer>
-              </Card>
+                  {step === 2 ? selectionActions : null}
+                </Card.Footer>
+              </RequestSummary>
             </aside>
           </div>
-          {selected.length > 0 && step === 2 ? (
-            <div className="mobile-selection-dock">
-              <button
-                className="mobile-selection-dock__count"
-                onClick={() => setIsSelectionOpen(true)}
-                type="button"
-              >
-                <strong>
-                  {selected.length} {assetCountLabel} selected
-                </strong>
-                <span>View selected items</span>
-              </button>
-              <Button
-                fullWidth
-                isDisabled={
-                  Boolean(blocked.length) ||
-                  Boolean(boothError) ||
-                  !hasRequiredBooth
-                }
-                onPress={() => setStep(3)}
-                variant="primary"
-              >
-                Continue
-              </Button>
-            </div>
-          ) : null}
-          <SheetContent
-            className="request-selection-sheet"
-            showCloseButton={false}
-            side="bottom"
-          >
-            <SheetHeader className="request-selection-sheet__header">
-              <div>
-                <SheetTitle>
-                  {selected.length} {assetCountLabel} selected
-                </SheetTitle>
-                <SheetDescription>
-                  {projectName || "New project"} · {startDate} to {endDate}
-                </SheetDescription>
-              </div>
-              <SheetClose asChild>
-                <BaseButton
-                  aria-label="Close selected assets"
-                  size="icon"
+          {step === 2 ? (
+            <Card
+              aria-label="Request summary"
+              className="border-border bg-surface fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-35 gap-3 border p-3 shadow-md lg:hidden"
+            >
+              <Card.Header className="gap-1">
+                <span className="text-muted text-xs font-medium">
+                  Request summary
+                </span>
+                <Button
+                  className="mobile-selection-dock__count h-auto w-full flex-col items-start"
                   variant="ghost"
+                  onPress={() => setIsSelectionOpen(true)}
+                  type="button"
                 >
-                  <X />
-                </BaseButton>
-              </SheetClose>
-            </SheetHeader>
-            <RequestSelectionList items={readiness} onRemove={removeAsset} />
-            <SheetFooter className="request-selection-sheet__footer">
-              {blocked.length ? (
-                <p>
-                  {blocked.length} selected{" "}
-                  {blocked.length === 1 ? "asset" : "assets"} need attention
-                  before review.
-                </p>
-              ) : null}
-              <Button
-                fullWidth
-                isDisabled={
-                  Boolean(boothError) ||
-                  budgetCodeError ||
-                  (!selected.length && !canContinueWithoutAssets) ||
-                  Boolean(blocked.length) ||
-                  !hasRequiredBooth
-                }
-                onPress={() => {
-                  setIsSelectionOpen(false);
-                  setStep(3);
-                }}
-                variant="primary"
+                  <strong>
+                    {selected.length} {assetCountLabel} selected
+                  </strong>
+                  <span className="text-muted text-xs">
+                    View selected items
+                  </span>
+                </Button>
+              </Card.Header>
+              <Card.Footer className="w-full">{selectionActions}</Card.Footer>
+            </Card>
+          ) : null}
+          <Modal.Backdrop
+            isOpen={isSelectionOpen}
+            onOpenChange={setIsSelectionOpen}
+          >
+            <Modal.Container placement="bottom">
+              <Modal.Dialog
+                className="request-selection-sheet"
+                aria-label="Selected assets"
               >
-                Continue to fulfillment
-              </Button>
-            </SheetFooter>
-          </SheetContent>
+                <Modal.Header className="request-selection-sheet__header">
+                  <div>
+                    <Modal.Heading>
+                      {selected.length} {assetCountLabel} selected
+                    </Modal.Heading>
+                    <p className="text-muted text-sm">
+                      {projectName || "New project"} · {startDate} to {endDate}
+                    </p>
+                  </div>
+
+                  <Button
+                    aria-label="Close selected assets"
+                    onPress={() => setIsSelectionOpen(false)}
+                    isIconOnly
+                    size="sm"
+                    variant="ghost"
+                  >
+                    <X />
+                  </Button>
+                </Modal.Header>
+                <RequestSelectionList
+                  items={readiness}
+                  onRemove={removeAsset}
+                />
+                <Modal.Footer className="request-selection-sheet__footer">
+                  {blocked.length ? (
+                    <p>
+                      {blocked.length} selected{" "}
+                      {blocked.length === 1 ? "asset" : "assets"} need attention
+                      before review.
+                    </p>
+                  ) : null}
+                  {selectionActions}
+                </Modal.Footer>
+              </Modal.Dialog>
+            </Modal.Container>
+          </Modal.Backdrop>
         </div>
-      </Sheet>
+      </>
     </AppShell>
   );
 }
@@ -1847,30 +2221,48 @@ function RequestSelectionList({
 }) {
   if (!items.length)
     return (
-      <p className="request-summary__empty">
-        Start by adding an available asset.
-      </p>
+      <div className="text-muted grid justify-items-center gap-3 py-8 text-center text-xs">
+        <PackageOpen className="size-8" aria-hidden="true" />
+        <strong className="text-foreground">Your selection starts here</strong>
+        <p>
+          Choose assets in the next step. They stay visible while you build the
+          request.
+        </p>
+      </div>
     );
   return (
-    <ul className="request-selection-list">
+    <ul className="grid max-h-80 gap-3 overflow-y-auto">
       {items.map(({ asset, quantity, result }) => (
-        <li className={result.eligible ? "" : "is-conflicted"} key={asset.id}>
-          <AssetArtwork asset={asset} variant="tile" />
-          <span className="request-selection-list__identity">
-            <strong>{asset.name}</strong>
+        <li
+          className={`grid grid-cols-6 items-start gap-2 rounded-xl border p-3 ${result.eligible ? "border-border" : "border-danger"}`}
+          key={asset.id}
+        >
+          <div className="col-span-1 overflow-hidden rounded-lg">
+            <AssetArtwork
+              asset={asset}
+              variant="tile"
+              aspectRatio="1:1"
+              showLabels={false}
+            />
+          </div>
+          <span className="col-span-4 grid min-w-0 gap-1 text-xs">
+            <strong className="line-clamp-2" title={asset.name}>
+              {asset.name}
+            </strong>
             <small>
-              {quantity} × {asset.category}
+              {quantity} {stockUnit(asset)} · {asset.category}
             </small>
             <small>
               {asset.brand} · {asset.location}
             </small>
             {!result.eligible && result.warnings[0] ? (
-              <small className="request-selection-list__warning">
+              <small className="text-danger-soft-foreground">
                 {result.warnings[0]}
               </small>
             ) : null}
           </span>
           <Chip
+            className="col-span-4 col-start-2"
             color={result.eligible ? "success" : "danger"}
             size="sm"
             variant="soft"
@@ -1878,9 +2270,11 @@ function RequestSelectionList({
             {result.eligible ? "Ready" : "Blocked"}
           </Chip>
           <Button
+            className="col-start-6 row-start-1"
             aria-label={`Remove ${asset.name}`}
-            isIconOnly
+
             onPress={() => onRemove(asset.id)}
+            isIconOnly
             size="sm"
             variant="ghost"
           >

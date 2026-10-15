@@ -2,7 +2,7 @@ export type AssetAvailability =
   "available" | "reserved" | "in-use" | "maintenance" | "unavailable";
 
 export type AssetCondition = "Good" | "Fair" | "Needs review";
-export type AssetClassification = "ASSET" | "INVENTORY";
+export type AssetClassification = "ASSET" | "INVENTORY" | "UNCLASSIFIED";
 
 export type WbsReference = {
   id: string;
@@ -51,6 +51,8 @@ export type AssetPhoto = {
   caption: string;
   /** In-memory image evidence; maintenance uses the existing Asset media list. */
   dataUrl?: string;
+  url?: string;
+  objectKey?: string;
   mimeType?: string;
   maintenancePurpose?: "Before" | "After";
   maintenanceId?: string;
@@ -77,10 +79,20 @@ export type AssetHistoryEntry = {
 
 export type Asset = {
   id: string;
+  warehouseId?: string;
+  vendorId?: string;
+  importInfo?: {
+    sheet: string; row: number; eventName?: string; setupName?: string; trackingConfirmed: boolean;
+    sourceCategory: string; sourceDate: string; sourceQty: string; sourceUnit: string; sourceBrand: string; sourceCode: string;
+    sourceStatus: string; sourceCondition: string; physicalConfirmation: string;
+    originalLocation: string; resolvedLocation: string; notes: string; ownerName: string; ownerEmail: string; picEmail: string;
+    reference: string; unitValue: string; sourceTotalValue: string; warnings: string[];
+  };
+
   code: string;
   name: string;
   brand: string;
-  category: "Booth" | "Display" | "POSM" | "Supporting asset";
+  category: "Booth" | "Display" | "POSM" | "Supporting asset" | "Unclassified";
   /** Optional only for compatibility with older fixture records. */
   classification?: AssetClassification;
   type: string;
@@ -90,7 +102,9 @@ export type Asset = {
     | "Vendor storage"
     | "Vendor warehouse"
     | "Vendor workshop"
-    | "Store";
+    | "Store"
+    | "Event venue"
+    | "Other";
   availability: AssetAvailability;
   condition: AssetCondition;
   producedAt: string;
@@ -107,6 +121,7 @@ export type Asset = {
   issues: AssetIssue[];
   history: AssetHistoryEntry[];
   blockedRanges?: Array<{ start: string; end: string; label: string }>;
+  unitPolicy?: import("@/lib/domain/asset-units").UnitPolicy;
   supportsQuantity?: boolean;
   availableQuantity?: number;
   totalQuantity?: number;
@@ -185,6 +200,7 @@ export type ReturnReceipt = {
   assetId: string;
   initiatedAt: string;
   initiatedBy: string;
+  loadingOutLetters?: RequestDocument[];
   receivedAt?: string;
   receivedBy?: string;
   receivingLocationId?: string;
@@ -308,7 +324,8 @@ export type PrototypeRequest = {
 };
 
 export type ApprovalDecision = "Approved" | "Rejected" | "Needs update";
-export type ApprovalAssignmentStatus = "Pending" | "Approved" | "Rejected" | "Needs update" | "Superseded";
+export type ApprovalAssignmentStatus =
+  "Pending" | "Approved" | "Rejected" | "Needs update" | "Superseded";
 /** One review step in one cycle; old steps are retained after reassignment or revision. */
 export type ApprovalAssignment = {
   id: string;
@@ -329,7 +346,14 @@ export type RequestReviewHistoryEntry = {
   id: string;
   cycle: number;
   timestamp: string;
-  action: "Submitted" | "Assigned" | "Reassigned" | "Approved" | "Rejected" | "Needs update" | "Resubmitted";
+  action:
+    | "Submitted"
+    | "Assigned"
+    | "Reassigned"
+    | "Approved"
+    | "Rejected"
+    | "Needs update"
+    | "Resubmitted";
   actorUserId: string;
   actorNameSnapshot: string;
   reviewerUserId?: string;
@@ -340,10 +364,15 @@ export type RequestReviewHistoryEntry = {
 export type RequestItem = {
   id: string;
   assetId: string;
+  /** Quantity is always expressed in stockUnit. */
   quantity: number;
+  stockUnit?: import("@/lib/domain/asset-units").AssetUnit;
+  borrowedUnit?: import("@/lib/domain/asset-units").AssetUnit;
+  unitsPerPackage?: number;
   fulfillmentMethod?: "Pickup" | "Delivery";
   fulfillmentState?:
     | "Reserved"
+    | "In transit"
     | "In use"
     | "Return pending"
     | "Inspection pending"
@@ -355,7 +384,16 @@ export type RequestItem = {
 
 export type RequestDraft = Omit<
   PrototypeRequest,
-  "id" | "items" | "status" | "submittedAt" | "wbsReferenceIds" | "submittedByUserId" | "reviewRound" | "reviewHistory" | "approvalComment" | "approver"
+  | "id"
+  | "items"
+  | "status"
+  | "submittedAt"
+  | "wbsReferenceIds"
+  | "submittedByUserId"
+  | "reviewRound"
+  | "reviewHistory"
+  | "approvalComment"
+  | "approver"
 > & { items: Array<Omit<RequestItem, "id">>; wbsCodes: string[] };
 export type IssueDraft = {
   area: string;
@@ -381,3 +419,28 @@ export type ActivationEvent = {
 };
 
 export type EventDraft = Omit<ActivationEvent, "id"> & { id?: string };
+
+/** Actual outbound evidence. Plans and approvals never create these records. */
+export type OutboundDispatch = {
+  id: string;
+  requestId: string;
+  groupId: string;
+  destination: string;
+  destinationType: Asset["locationType"];
+  destinationLocationId?: string;
+  dispatchedAt: string;
+  dispatchedByUserId: string;
+  senderPic: string;
+  loadingInLetters: RequestDocument[];
+  items: Array<{
+    requestItemId: string;
+    assetId: string;
+    quantity: number;
+    sourceLocation: string;
+    sourceCustodian?: string;
+    receivedAt?: string;
+    receivedByUserId?: string;
+    receiverPic?: string;
+    conditionAtReceipt?: AssetCondition;
+  }>;
+};

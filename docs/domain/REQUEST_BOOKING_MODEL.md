@@ -54,11 +54,11 @@ Booking windows may include configurable preparation/pickup, event use, teardown
 Request status is separate from per-item fulfillment. A request may aggregate Pending Approval, Approved, Partially Fulfilled, Completed, or Cancelled while items independently progress through Reserved, Ready for Dispatch, In Transit, In Use, Return Pending, Inspection Pending, Returned, or Outstanding.
 
 ## Booking flow
-Asset discovery/detail -> request items -> usage (registered event, registered vendor workshop, or policy-limited ad-hoc purpose) -> operational dates -> readiness/booking check -> fulfillment -> review -> submit -> approval -> reservation/use -> return.
+Asset discovery/detail -> request items -> usage (registered event or policy-limited ad-hoc purpose) -> operational dates -> readiness/booking check -> fulfillment -> review -> submit -> approval -> reservation/use -> return.
 
 In the item picker, the card surface is the multi-select control. Media navigation, photo preview, quantity controls, and detail links remain separate interactive targets. Cards show stable physical identity, condition, and current confirmed location; they must not imply date availability before dates are entered.
 
-Registered Event selection derives Brand, Campaign/Concept, Event name, venue, city, and event dates. An Event may have a single optional parent Event and may be displayed with its child instances. A request stores the selected Event ID. A request can also target a registered vendor workshop address; vendor identity alone is insufficient because one vendor can have multiple workshops. The default PIC is the current account owner; it is not copied from the Event record in the prototype. Operational pickup/return dates may extend around event dates according to configurable rules. Ad-hoc purpose remains limited to the existing approved purpose list, and a new outside place remains request-scoped pending governance.
+Registered Event selection derives Brand, Campaign/Concept, Event name, venue, city, and event dates. An Event may have a single optional parent Event and may be displayed with its child instances. A request stores the selected Event ID. An Ad-hoc request can also target a registered vendor workshop address; vendor identity alone is insufficient because one vendor can have multiple workshops. The default PIC is the current account owner; it is not copied from the Event record in the prototype. Operational pickup/return dates may extend around event dates according to configurable rules. Ad-hoc purpose remains limited to the existing approved purpose list, and a new outside place remains request-scoped pending governance.
 
 Booth-loan requests capture an editable Project Name and full project address, borrowing-period dates, project-site PIC, optional space dimensions and event notes, and optional supporting documents categorized as Floor plan / venue layout, Loading-in letter, and Loading-out letter. Loading-in and loading-out date/time are entered in Fulfillment separately from the borrowing/event period. The requesting PIC remains the signed-in account by default. Budget code is required in the current booth-loan prototype and is separate from WBS; neither is verified against a finance system. Local document selections are encoded in frontend memory so they can be reviewed in this prototype only; they are not uploaded to durable storage.
 
@@ -106,3 +106,19 @@ The Operations screen contains a month calendar with Brand, Asset, Event/Activit
 ## Manual WBS references
 
 Phase 1 supports optional, manually entered WBS references. The UI's `ABC12345` example is illustrative, not a prescribed format. The prototype trims whitespace, skips empty entries, removes exact duplicate codes, and reuses an existing exact-match reference where available. A request may link to multiple references; the reusable reference entity can be linked from multiple requests. Codes are not format-validated or externally verified. Who must enter WBS and which request contexts require it remain unresolved; do not enforce a universal requirement until that policy is approved.
+
+## Registered event and document timing update
+
+Choose Brand before Event / activation. For Registered Event requests, project name and full project address derive from the selected master Event and are read-only in the request; selecting a different Event updates them. Usage/borrowing dates remain editable to define when assets are needed. Ad-hoc requests retain editable project information. New Request accepts venue layout and loading-in letters. Loading-out letters belong to the Start Return form, not request creation. Legacy request attachments remain readable during revision; no automatic deletion of historical evidence.
+
+## Request purpose versus physical destination
+
+New Request has two usage choices: Registered Event and Ad-hoc Event. Vendor workshop is a registered physical destination, available through Ad-hoc → Outside Store → Registered destination, with its vendor identity and exact workshop Location ID retained in fulfillment. Workshop use still requires a supported ad-hoc purpose and usage dates. Movement without a usage need belongs to Transfer; repair belongs to Maintenance. Existing historical Vendor workshop request types remain readable/revisable without silently rewriting their history. A request-scoped new place carries no registered workshop/vendor identity.
+
+## Actual outbound follow-up
+
+Approved Request dispatch and usage-destination receipt are now implemented as explicit frontend prototype evidence. See [Approved Request Outbound](OUTBOUND_WORKFLOW.md). Historical records are not inferred. This supersedes the planning-only outbound limitation for newly recorded handovers; automatic linked Return tasks and in-app reminders now follow `../experience/BOOKING_TRACKING.md`. Durable operational records and background notification delivery remain pending.
+
+## Persisted Vendor destination source
+
+New Request now selects real active Vendor warehouses from the local PostgreSQL master via the operational server projection. Exact warehouse UUID, Vendor UUID, supplied address and active PIC suggestions replace vendor fixtures. Requester identity remains separate from site PIC. Inactive/incomplete destinations are excluded; failures never substitute demo vendors. Legacy Vendor destination history remains readable, but revisions must choose a current database destination. Submit revalidates eligibility, including inside the durable booking transaction. See VENDOR_MASTER_PERSISTENCE.md.

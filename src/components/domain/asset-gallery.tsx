@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, Chip } from "@heroui/react";
 
-import { AppIcon } from "@/components/ui/app-icon";
+import { AppIcon } from "@/components/shared/app-icon";
 import type { Asset } from "@/types/prototype";
 import { AssetArtwork } from "./asset-artwork";
 
@@ -12,26 +12,38 @@ export function AssetGallery({ asset }: { asset: Asset }) {
   const photo = asset.photos[selected];
   return (
     <section className="asset-gallery" aria-label="Asset photo gallery">
-      <AssetArtwork asset={asset} priority />
+      <AssetArtwork asset={asset} photo={photo} priority />
       <Chip className="asset-gallery__count" size="sm" variant="soft">
-        {selected + 1} / {asset.photos.length}
+        {asset.photos.length ? selected + 1 : 0} / {asset.photos.length}
       </Chip>
       <div className="asset-gallery__controls">
         <Button
           aria-label="Previous photo"
           isDisabled={!selected}
-          onClick={() => setSelected((value) => value - 1)}
-          isIconOnly size="sm" variant="secondary">
+          onPress={() => setSelected((value) => value - 1)}
+          isIconOnly
+          size="sm"
+          variant="secondary"
+        >
           <AppIcon name="chevron-left" />
         </Button>
         <span>
-          {photo.view} · {photo.caption}
+          {photo
+            ? asset.importInfo
+              ? `Source photo ${selected + 1}`
+              : `${photo.view} · ${photo.caption}`
+            : "Documentation not available"}
         </span>
         <Button
           aria-label="Next photo"
-          isDisabled={selected === asset.photos.length - 1}
-          onClick={() => setSelected((value) => value + 1)}
-          isIconOnly size="sm" variant="secondary">
+          isDisabled={
+            !asset.photos.length || selected >= asset.photos.length - 1
+          }
+          onPress={() => setSelected((value) => value + 1)}
+          isIconOnly
+          size="sm"
+          variant="secondary"
+        >
           <AppIcon name="chevron-right" />
         </Button>
       </div>
@@ -41,9 +53,11 @@ export function AssetGallery({ asset }: { asset: Asset }) {
             aria-pressed={selected === index}
             className={selected === index ? "is-selected" : ""}
             key={item.id}
-            onClick={() => setSelected(index)}
-            size="sm" variant={selected === index ? "primary" : "ghost"}>
-            {item.view}
+            onPress={() => setSelected(index)}
+            size="sm"
+            variant={selected === index ? "primary" : "ghost"}
+          >
+            {asset.importInfo ? `Photo ${index + 1}` : item.view}
           </Button>
         ))}
       </div>

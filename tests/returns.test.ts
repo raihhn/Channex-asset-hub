@@ -384,3 +384,34 @@ describe("authoritative per-item return", () => {
     expect(ambiguous.unresolved).toEqual([legacy]);
   });
 });
+
+it("keeps loading-out evidence on the exact return item without confirming inbound", () => {
+  const letter = {
+    id: "letter-1",
+    category: "Loading-out letter" as const,
+    name: "loading-out.pdf",
+    size: 100,
+    mimeType: "application/pdf",
+    dataUrl: "data:application/pdf;base64,JVBERg==",
+  };
+  const result = initiateReturn(
+    [],
+    partialRequest,
+    partialRequest.items[1].id,
+    "Holder",
+    "2026-10-03T10:00:00+07:00",
+    [letter],
+  );
+  expect(result[0].loadingOutLetters).toEqual([letter]);
+  expect(result[0].receivedAt).toBeUndefined();
+  expect(() =>
+    initiateReturn(
+      [],
+      partialRequest,
+      partialRequest.items[1].id,
+      "Holder",
+      "2026-10-03T10:00:00+07:00",
+      [{ ...letter, size: 6 * 1024 * 1024 }],
+    ),
+  ).toThrow(/5 MB/);
+});
