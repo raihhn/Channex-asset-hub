@@ -1,0 +1,5 @@
+# AssetHub only: HeroUI React v3 documentation tools.
+[mcp_servers.heroui-react]
+command = "npx"
+args = ["-y", "@heroui/react-mcp@1.1.2"]
+startup_timeout_sec = 60

@@ -1,0 +1,542 @@
+"use client";
+import { assetReference } from "@/lib/domain/asset-reference";
+
+import Link from "next/link";
+import { isLocalSessionError, localIdentityMessage } from "@/lib/actor-client";
+import { AssetMetadata, AssetLegacyContext } from "./asset-metadata";
+import { AssetEditor } from "./asset-editor";
+import { AssetHistory } from "./asset-history";
+import { AssetDocumentationEditor } from "./asset-documentation-editor";
+import { Button, Card } from "@heroui/react";
+
+import { currentWarehouseContact } from "@/lib/domain/asset-location-contacts";
+import { AssetGallery } from "@/components/domain/asset-gallery";
+import { AssetClassification } from "@/components/domain/asset-classification";
+import { AssetIssueSummary } from "@/components/domain/asset-issue-summary";
+import { AssetStatus } from "@/components/domain/asset-status";
+import { DocumentationChecklist } from "@/components/domain/documentation-checklist";
+import { WorkflowDisclosure } from "@/components/shared/workflow-disclosure";
+import { AppShell } from "@/components/shared/app-shell";
+import { usePrototype } from "@/features/prototype/prototype-provider";
+import { isOperationallySelectable } from "@/lib/fixtures/request-eligibility";
+import { isDisposalReviewRecommended } from "@/lib/domain/asset-governance";
+import { deriveReservations } from "@/lib/domain/reservations";
+import { activeMaintenanceForAsset } from "@/lib/domain/maintenance";
+
+export function AssetDetailScreen({ assetId }: { assetId: string }) {
+  const {
+    assets,
+    assetLoading,
+    assetError,
+    events,
+    requests,
+    returnReceipts,
+    outboundDispatches,
+    maintenanceRecords,
+    operationalLocations,
+    vendorLoading,
+    vendorError,
+  } = usePrototype();
+  const asset = assets.find((item) => item.id === assetId);
+  if (assetLoading)
+    return (
+      <AppShell pageLabel="Asset detail">
+        <p role="status">Loading asset database…</p>
+      </AppShell>
+    );
+  if (assetError)
+    return (
+      <AppShell pageLabel="Asset detail">
+        <Card className="border-border grid gap-4 border p-4 sm:p-6">
+          <Card.Header>
+            <Card.Title>Data asset belum dapat dimuat</Card.Title>
+          </Card.Header>
+          <Card.Content className="grid gap-3">
+            <p role="alert">
+              {isLocalSessionError(assetError)
+                ? "Sesi lokal belum aktif atau sudah berakhir. Pilih kembali identitas lokal untuk membuka asset."
+                : localIdentityMessage(assetError)}
+            </p>
+            <Link className="back-link" href="/me">
+              Pilih identitas lokal di Me →
+            </Link>
+            <Button
+              className="w-fit"
+              variant="secondary"
+              onPress={() => window.location.reload()}
+            >
+              Coba lagi
+            </Button>
+          </Card.Content>
+        </Card>
+      </AppShell>
+    );
+  if (!asset)
+    return (
+      <AppShell pageLabel="Asset detail">
+        <p>Asset not found.</p>
+      </AppShell>
+    );
+  const warehouseContact =
+    !vendorLoading && !vendorError
+      ? currentWarehouseContact(asset, operationalLocations)
+      : undefined;
+  const latestReceipt = returnReceipts
+    .filter((receipt) => receipt.assetId === asset.id && receipt.receivedAt)
+    .sort((first, second) =>
+      second.receivedAt!.localeCompare(first.receivedAt!),
+    )[0];
+  const now = new Date();
+  const localNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const upcomingReservations = deriveReservations(
+    requests,
+    assets,
+    events,
+    returnReceipts,
+    outboundDispatches,
+  )
+    .filter(
+      (reservation) =>
+        reservation.assetId === asset.id &&
+        reservation.blocksAvailability &&
+        !reservation.actualInboundAt &&
+        (reservation.inboundAt >= localNow || reservation.blocksAvailability),
+    )
+    .sort((first, second) => first.outboundAt.localeCompare(second.outboundAt));
+  const completedWithoutReceipt = upcomingReservations.find(
+    (reservation) => reservation.requestStatus === "Completed",
+  );
+  const requestable =
+    isOperationallySelectable(asset) &&
+    asset.classification === "ASSET" &&
+    asset.trackingType === "Individual" &&
+    (asset.totalQuantity ?? 1) === 1 &&
+    !completedWithoutReceipt;
+  const activeMaintenance = activeMaintenanceForAsset(
+    maintenanceRecords,
+    asset.id,
+  );
+  const maintenanceHistory = maintenanceRecords.filter(
+    (record) => record.assetId === asset.id,
+  );
+  return (
+    <AppShell pageLabel="Asset detail">
+      <div className="asset-detail-screen">
+        <Link className="back-link" href="/assets">
+          ← All assets
+        </Link>
+        <AssetEditor key={asset.id} asset={asset} />
+        <div className="asset-detail-layout">
+          <div className="asset-detail-artwork">
+            <AssetGallery asset={asset} />
+          </div>
+          <div className="asset-detail-summary">
+            <p>
+              {asset.brand}{assetReference(asset) ? ` · ${assetReference(asset)}` : ""}
+            </p>
+            <h1>{asset.name}</h1>
+            <span className="asset-detail-summary__type">{asset.type}</span>
+            <AssetClassification asset={asset} />
+            {isDisposalReviewRecommended(asset) ? (
+              <span className="lifecycle-flag">
+                Disposal review recommended
+              </span>
+            ) : null}
+            <div className="asset-detail-summary__status">
+              {completedWithoutReceipt ? (
+                <span className="lifecycle-flag">Receipt unconfirmed</span>
+              ) : (
+                <AssetStatus status={asset.availability} />
+              )}
+              {asset.lifecycleNote ? (
+                <span className="lifecycle-flag">{asset.lifecycleNote}</span>
+              ) : null}
+              {completedWithoutReceipt ? (
+                <span className="lifecycle-flag">
+                  Receipt evidence unavailable ·{" "}
+                  {completedWithoutReceipt.requestId}
+                </span>
+              ) : null}
+            </div>
+            <p className="asset-detail-summary__description">
+              {asset.description}
+            </p>
+          </div>
+        </div>
+        <section className="asset-facts" aria-label="Asset operational details">
+          <Fact
+            label="Warehouse & Location"
+            value={asset.location}
+            note={`${asset.locationType} · ${asset.warehouseDetails?.address || operationalLocations.find((l) => l.id === asset.warehouseId)?.address || asset.locationDetail || "Address not recorded"}. Recorded warehouse reference; not verified physical custody.`}
+          />
+          {(asset.warehouseDetails?.contact || warehouseContact) && (
+            <Fact
+              label="Kontak warehouse"
+              value={
+                asset.warehouseDetails?.contact ||
+                warehouseContact ||
+                "Contact unavailable"
+              }
+              note="Dari Vendor Master sesuai lokasi tercatat; terpisah dari PIC pengelola dan penerima fisik."
+            />
+          )}
+          <Fact
+            label="Current custodian"
+            value={asset.currentCustodian ?? "Not recorded"}
+            note="Updated only after physical receipt"
+          />
+          {latestReceipt?.receivedAt ? (
+            <Fact
+              label="Actual inbound"
+              value={new Date(latestReceipt.receivedAt).toLocaleString(
+                "en-GB",
+                {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                },
+              )}
+              note={`Condition: ${latestReceipt.conditionAtReceipt} · ${latestReceipt.receivedBy}`}
+            />
+          ) : null}
+          <Fact
+            label="Asset age"
+            value={asset.ageLabel}
+            note={`Produced ${asset.producedAt}`}
+          />
+          <Fact
+            label="Status & Condition"
+            value={asset.condition}
+            note={
+              asset.inspectionState !== "Clear"
+                ? "Physical inspection not confirmed; condition alone does not establish readiness"
+                : "Recorded condition; eligibility follows all operational checks"
+            }
+          />
+          <Fact
+            label="Lifecycle / review"
+            value={asset.lifecycleNote ? "Review attention" : "Operational"}
+            note={asset.lifecycleNote ?? "No review currently due"}
+          />
+          <Fact
+            label="Last used"
+            value={asset.lastUsed}
+            note={asset.lastUsedContext}
+          />
+        </section>
+        {asset.warehouseDetails?.active === false && (
+          <p className="text-warning mb-4 text-sm">
+            Recorded warehouse is inactive. Existing location is preserved; no
+            movement is inferred.
+          </p>
+        )}
+        {asset.warehouseDetails?.addressVerified === false && (
+          <p className="text-warning mb-4 text-sm">
+            Warehouse address is not verified.
+          </p>
+        )}
+        <AssetMetadata asset={asset} />
+        <p className="text-muted mb-6 text-sm">
+          {asset.conditionNotes || "Condition explanation not recorded."}
+        </p>
+        <AssetDocumentationEditor asset={asset} />
+        <AssetLegacyContext asset={asset} />
+        {asset.importInfo ? (
+          <Card className="border-border mb-6 gap-3 border p-4 sm:p-6">
+            <Card.Header>
+              <Card.Title>Sumber Excel asli</Card.Title>
+              <Card.Description>
+                {asset.importInfo.sheet} · Row {asset.importInfo.row} · Original
+                import. Referensi sumber, bukan bukti penggunaan event.
+              </Card.Description>
+            </Card.Header>
+            <Card.Content className="grid gap-3 text-sm">
+              <WorkflowDisclosure
+                title={`Source details${asset.importInfo.warnings.length ? ` · ${asset.importInfo.warnings.length} source flags` : ""}`}
+              >
+                <p>
+                  Stock: {asset.totalQuantity ?? "Belum diisi"}{" "}
+                  {asset.unitPolicy?.stockUnit ?? "UoM belum diisi"}
+                </p>
+                <p>
+                  Source quantity: {asset.importInfo.sourceQty || "Belum diisi"}{" "}
+                  {asset.importInfo.sourceUnit}
+                </p>
+                {asset.importInfo.eventName ? (
+                  <p>
+                    Konteks event / koleksi dari Excel:{" "}
+                    {asset.importInfo.eventName}
+                  </p>
+                ) : null}
+                {asset.importInfo.setupName ? (
+                  <p>Setup / zona dari Excel: {asset.importInfo.setupName}</p>
+                ) : null}
+                <p>Warehouse: {asset.location}</p>
+                <p>Owner: {asset.importInfo.ownerName || "Belum diisi"}</p>
+                <p>
+                  PIC pengelola saat ini:{" "}
+                  {asset.responsiblePic || "Belum diisi"}
+                </p>
+                <p>
+                  Source status:{" "}
+                  {asset.importInfo.sourceStatus || "Belum diisi"} · Physical
+                  confirmation:{" "}
+                  {asset.importInfo.physicalConfirmation || "Belum diperiksa"}
+                </p>
+                {asset.importInfo.notes ? (
+                  <p className="whitespace-pre-wrap">
+                    Notes: {asset.importInfo.notes}
+                  </p>
+                ) : null}
+                {asset.importInfo.reference ? (
+                  <p>
+                    PO / Invoice asli dari Excel (riwayat sumber):{" "}
+                    {asset.importInfo.reference}
+                  </p>
+                ) : null}
+                <p className="break-words">
+                  Source owner email:{" "}
+                  {asset.importInfo.ownerEmail || "Belum diisi"}
+                </p>
+                <p className="break-words">
+                  Source PIC email: {asset.importInfo.picEmail || "Belum diisi"}
+                </p>
+                {asset.importInfo.sourceDate ? (
+                  <p>
+                    Source event / usage / received date:{" "}
+                    {asset.importInfo.sourceDate} (meaning needs confirmation)
+                  </p>
+                ) : null}
+                {asset.importInfo.warnings.length ? (
+                  <div>
+                    <p className="font-medium">Needs confirmation</p>
+                    <ul className="list-disc space-y-1 pl-5">
+                      {asset.importInfo.warnings.map((warning, index) => (
+                        <li key={index}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </WorkflowDisclosure>
+            </Card.Content>
+          </Card>
+        ) : null}
+        <AssetIssueSummary asset={asset} />
+        <section className="asset-health" aria-label="Maintenance records">
+          <div>
+            <p>Asset operations</p>
+            <h2>Maintenance</h2>
+          </div>
+          {activeMaintenance ? (
+            <p>
+              <strong>Active: {activeMaintenance.status}</strong> ·{" "}
+              <Link href={`/maintenance/${activeMaintenance.id}`}>
+                Open {activeMaintenance.id} →
+              </Link>
+            </p>
+          ) : (
+            <Link href={`/maintenance/new?assetId=${asset.id}`}>
+              Create maintenance →
+            </Link>
+          )}
+          {!activeMaintenance &&
+          asset.issues.filter((issue) => issue.status !== "Resolved").length ? (
+            <div className="space-y-1">
+              {asset.issues
+                .filter((issue) => issue.status !== "Resolved")
+                .map((issue) => (
+                  <p key={issue.id}>
+                    <Link
+                      href={`/maintenance/new?assetId=${asset.id}&issueId=${issue.id}`}
+                    >
+                      Create maintenance from {issue.type} issue →
+                    </Link>
+                  </p>
+                ))}
+            </div>
+          ) : null}
+          {maintenanceHistory.length ? (
+            <ul>
+              {maintenanceHistory.map((record) => (
+                <li key={record.id}>
+                  <Link href={`/maintenance/${record.id}`}>{record.id}</Link> ·{" "}
+                  {record.status} · {record.reason}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No maintenance records in this session.</p>
+          )}
+        </section>
+        <section className="asset-health" aria-label="Asset schedule">
+          <div>
+            <p>Schedule</p>
+            <h2>Near-future usage</h2>
+          </div>
+          <ol className="request-timeline">
+            <li className="is-complete">
+              <span />
+              <div>
+                <strong>Today · {asset.location}</strong>
+                <small>Current recorded location</small>
+              </div>
+            </li>
+            {upcomingReservations.slice(0, 4).map((reservation) => (
+              <li key={reservation.id} className="is-current">
+                <span />
+                <div>
+                  <strong>{reservation.activityName}</strong>
+                  <small>
+                    Planned outbound{" "}
+                    {reservation.outboundAt.replace("T", " · ")} · Scheduled
+                    usage {reservation.usageStartAt.slice(0, 10)}–
+                    {reservation.usageEndAt.slice(0, 10)} · Expected return{" "}
+                    {reservation.inboundAt.replace("T", " · ")}
+                  </small>
+                  <small>
+                    {reservation.assetBrand} · {reservation.destination} ·{" "}
+                    {reservation.requestId} · Planned
+                  </small>
+                  <Link href={`/requests/${reservation.requestId}`}>
+                    View request
+                  </Link>
+                </div>
+              </li>
+            ))}
+            {!upcomingReservations.length
+              ? (asset.blockedRanges ?? []).map((range) => (
+                  <li
+                    key={`${range.start}-${range.end}`}
+                    className="is-current"
+                  >
+                    <span />
+                    <div>
+                      <strong>
+                        {range.start} — {range.end}
+                      </strong>
+                      <small>{range.label} · Reserved (fixture schedule)</small>
+                    </div>
+                  </li>
+                ))
+              : null}
+            {asset.availability === "in-use" ? (
+              <li className="is-current">
+                <span />
+                <div>
+                  <strong>Current activation</strong>
+                  <small>{asset.lastUsedContext} · In use</small>
+                </div>
+              </li>
+            ) : null}
+            {!asset.blockedRanges?.length && asset.availability !== "in-use" ? (
+              <li>
+                <span />
+                <div>
+                  <strong>No future booking in fixture</strong>
+                  <small>
+                    {requestable
+                      ? "Eligibility is checked for the requested period"
+                      : "Not requestable until existing readiness requirements are met"}
+                  </small>
+                </div>
+              </li>
+            ) : null}
+          </ol>
+        </section>
+        <section className="asset-health" aria-label="Asset health">
+          <div>
+            <p>Asset health</p>
+            <h2>Operational readiness</h2>
+          </div>
+          <dl>
+            <div>
+              <dt>Condition</dt>
+              <dd>{asset.condition}</dd>
+            </div>
+            <div>
+              <dt>Open issues</dt>
+              <dd>
+                {
+                  asset.issues.filter((issue) => issue.status !== "Resolved")
+                    .length
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Documentation</dt>
+              <dd>
+                {
+                  new Set(
+                    asset.photos
+                      .filter(
+                        (photo) =>
+                          (photo.objectKey || photo.url || photo.dataUrl) &&
+                          ["Front", "Left side", "Right side"].includes(
+                            photo.view,
+                          ),
+                      )
+                      .map((photo) => photo.view),
+                  ).size
+                }{" "}
+                / 3 required views
+              </dd>
+            </div>
+            <div>
+              <dt>Maintenance</dt>
+              <dd>{asset.maintenance?.status ?? "Not in maintenance"}</dd>
+            </div>
+            <div>
+              <dt>Inspection</dt>
+              <dd>{asset.inspectionState ?? "Clear"}</dd>
+            </div>
+          </dl>
+        </section>
+        <DocumentationChecklist asset={asset} />
+        <AssetHistory assetId={asset.id} revision={asset.catalogRevision} />
+        <div className={requestable ? "sticky-action" : "mt-4"}>
+          {requestable ? (
+            <Link
+              className="request-asset-button"
+              href={`/request/${asset.id}`}
+            >
+              Request this asset <span aria-hidden="true">→</span>
+            </Link>
+          ) : (
+            <div className="border-border bg-surface grid gap-2 rounded-xl border p-4">
+              <strong>Not requestable right now</strong>
+              <span>
+                {asset.availability === "maintenance"
+                  ? "Maintenance needs to be resolved first."
+                  : completedWithoutReceipt
+                    ? "A completed request has no confirmed physical return receipt."
+                    : asset.importInfo
+                      ? "Confirm the asset data and physical condition before borrowing."
+                      : "This asset is currently unavailable."}
+              </span>
+            </div>
+          )}
+        </div>
+        <Link className="report-issue-link" href={`/assets/${asset.id}/issue`}>
+          Report an issue
+        </Link>
+      </div>
+    </AppShell>
+  );
+}
+
+function Fact({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string;
+  note: string;
+}) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+      <small>{note}</small>
+    </div>
+  );
+}

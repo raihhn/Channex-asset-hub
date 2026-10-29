@@ -1,0 +1,12 @@
+node_modules
+.next
+docs
+AI_GUIDE.md
+coverage
+playwright-report
+test-results
+package-lock.json
+
+# Private local data and temporary files
+.local
+tmp

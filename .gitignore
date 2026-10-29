@@ -1,0 +1,34 @@
+# dependencies
+/node_modules
+
+# Next.js
+/.next
+/out
+
+# test output
+/coverage
+/playwright-report
+/test-results
+
+# local environment
+.env*
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+
+# macOS Finder metadata
+.DS_Store
+
+# Private extracted workbook media; local development storage adapter
+/.local/
+
+# Temporary document renders and editor scratch files
+/tmp/
+*.swp
+*.swo
+*~
+
+# Local operator inputs
+/db/imports/
+/db/seeds/vendor_initial.json
